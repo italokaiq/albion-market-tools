@@ -4,7 +4,7 @@ from pathlib import Path
 import unittest
 from unittest.mock import patch
 from production_profiles import ProductionProfiles
-from persistence import write_settings
+from persistence import write_settings, write_bytes
 from launcher import diagnostic
 
 class ProfilesTest(unittest.TestCase):
@@ -48,10 +48,31 @@ class ProfilesTest(unittest.TestCase):
             with self.assertRaises(OSError):write_settings(self.path,{'after':True})
         self.assertEqual(json.loads(self.path.read_text()),{'before':True})
         self.assertEqual(list(self.path.parent.glob('*.tmp')),[])
+    def test_write_bytes_roundtrip_and_backup(self):
+        write_bytes(self.path,b'\x00\x01primeiro')
+        write_bytes(self.path,b'segundo')
+        self.assertEqual(self.path.read_bytes(),b'segundo')
+        self.assertEqual(self.path.with_suffix('.json.bak').read_bytes(),b'\x00\x01primeiro')
+
+    def test_write_bytes_failed_replace_preserves_previous(self):
+        write_bytes(self.path,b'before')
+        with patch('persistence.os.replace',side_effect=OSError('failure')):
+            with self.assertRaises(OSError):write_bytes(self.path,b'after')
+        self.assertEqual(self.path.read_bytes(),b'before')
+        self.assertEqual(list(self.path.parent.glob('*.tmp')),[])
+
     def test_diagnostic_has_no_market_prices(self):
         report=diagnostic()
         self.assertTrue(all(v=='OK' for v in report['catalogos'].values()))
         self.assertEqual(report['rede'],'não testada')
+
+    def test_diagnostic_check_updates_is_opt_in_and_uses_catalog_updater(self):
+        with patch('catalog_updater.check_updates',return_value={'items.json':{'ok':True,'changed':False},
+                'world.json':{'ok':True,'changed':True},'recipes_source.json':{'ok':False,'error':'timeout'}}):
+            report=diagnostic(check_updates=True)
+        self.assertEqual(report['atualizacoes'],{'items.json':'igual','world.json':'mudou',
+            'recipes_source.json':'falha: timeout'})
+        self.assertNotEqual(report['rede'],'não testada')
 
     def test_loaded_profile_requires_cost_confirmation(self):
         import tkinter as tk

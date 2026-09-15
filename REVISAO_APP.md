@@ -1,3 +1,17 @@
+# Revisão do aplicativo — 15/09/2026 (parte 6)
+
+## Atualizador de catálogo
+
+Mais um item da lista original resolvido: "Atualização do catálogo: as receitas públicas têm data de coleta; falta um atualizador com validação e aviso de mudanças."
+
+- URLs confirmadas por tamanho exato de arquivo contra o repositório real (não adivinhadas): `items.json`/`world.json` do app vêm de `formatted/` no ao-bin-dumps; `recipes_source.json` vem do `items.json` da raiz do repositório.
+- `catalog_updater.py`: checagem barata via HEAD/Content-Length (`check_updates`), download+validação+gravação atômica com backup (`download_and_apply`), e regeneração de `recipes.json`/`market_items.json` a partir do novo `recipes_source.json` (`regenerate_derived`, reaproveitando `recipes.extract()`/`catalog_items.extract()` já testados). `persistence.py` ganhou `write_bytes()` para isso — grava bytes crus, sem reserializar como JSON indentado (o que infla arquivos de dezenas de MB).
+- `atualizar_catalogo.cmd` para rodar com um clique. `launcher.py --diagnostico --verificar-atualizacoes` expõe a checagem barata (sem baixar nada) como opção — o diagnóstico padrão continua sem tocar rede, como sempre.
+- Testado de ponta a ponta contra a rede real: baixei os três catálogos de verdade, validei, gerei os derivados — mas sempre apontando para uma pasta temporária isolada, nunca os arquivos reais do app. Aprendizado da sessão anterior aplicado aqui desde o início.
+- Não atualiza um `.exe` já empacotado (limitação arquitetural do `--onefile`, documentada); é preciso rodar `build_exe.cmd` de novo depois de atualizar o catálogo, se for redistribuir.
+
+Validação: 137 testes passaram.
+
 # Revisão do aplicativo — 15/09/2026 (parte 5)
 
 ## Biblioteca de receitas salvas

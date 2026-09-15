@@ -6,7 +6,7 @@ import sqlite3
 import sys
 from paths import resource_path, data_path
 
-def diagnostic():
+def diagnostic(check_updates=False):
     files={}
     for name in ('items.json','world.json','recipes.json','recipes_source.json','market_items.json'):
         try:
@@ -14,12 +14,22 @@ def diagnostic():
             expected=list if name in ('items.json','world.json','market_items.json') else dict
             files[name]='OK' if isinstance(data,expected) and bool(data) else 'Formato inválido'
         except (OSError,ValueError):files[name]='Ausente ou inválido'
-    return {'python':sys.version.split()[0],'sqlite':sqlite3.sqlite_version,'catalogos':files,
+    report={'python':sys.version.split()[0],'sqlite':sqlite3.sqlite_version,'catalogos':files,
             'servidor':'Américas','rede':'não testada','precos':'não incluídos no diagnóstico'}
+    if check_updates:
+        from catalog_updater import check_updates as check_catalog_updates
+        report['rede']='testada (checagem de tamanho dos catálogos remotos)'
+        try:
+            updates=check_catalog_updates()
+            report['atualizacoes']={name:('mudou' if r.get('changed') else 'igual') if r.get('ok')
+                else f"falha: {r.get('error')}" for name,r in updates.items()}
+        except Exception as error:
+            report['atualizacoes']={'erro':str(error)}
+    return report
 
 def main():
     if '--diagnostico' in sys.argv:
-        report=diagnostic()
+        report=diagnostic(check_updates='--verificar-atualizacoes' in sys.argv)
         print(json.dumps(report,ensure_ascii=False,indent=2))
         return 0 if all(v=='OK' for v in report['catalogos'].values()) and sys.version_info>=(3,12) else 1
     folder=data_path('logs');folder.mkdir(exist_ok=True)

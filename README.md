@@ -163,6 +163,14 @@ Operações sem confirmação aparecem como "Prevista, sem confirmação"; é po
 
 Validação: 102 testes passaram, incluindo gravação/confirmação/remoção do histórico, rejeição de registro com dados inválidos e a tela de histórico.
 
+## Atualizador de catálogo — 15/09/2026
+
+`atualizar_catalogo.cmd` (ou `python catalog_updater.py`) verifica os três catálogos-fonte no repositório público [ao-bin-dumps](https://github.com/ao-data/ao-bin-dumps) — `items.json`, `world.json` e `recipes_source.json` — comparando o tamanho remoto com o local (checagem rápida, sem baixar tudo). Se algo mudou, baixa, valida o formato (tipo esperado, não vazio, chave `items` presente em `recipes_source.json`) e só então substitui o arquivo local, com a versão anterior preservada em `.bak`. Um download que falhe na validação nunca sobrescreve o catálogo atual. Depois de atualizar `recipes_source.json`, `recipes.json` e `market_items.json` são regerados automaticamente a partir dele.
+
+Roda a partir do código-fonte; não atualiza um `.exe` já empacotado (recursos embutidos num `--onefile` não são graváveis de forma persistente) — gere um novo `.exe` com `build_exe.cmd` depois de atualizar, se for distribuir. `python launcher.py --diagnostico --verificar-atualizacoes` faz só a checagem de tamanho (sem baixar nem gravar nada) e mostra o resultado junto do diagnóstico normal; sem essa opção, o diagnóstico continua sem tocar na rede, como sempre foi.
+
+Validação: 137 testes passaram, incluindo o fluxo completo (baixar, validar, gravar, regerar) testado de verdade contra o repositório real, apontado para uma pasta temporária isolada — nunca contra os catálogos reais do app durante os testes automatizados.
+
 ## Biblioteca de receitas — 15/09/2026
 
 **Salvar receita como...** e **Minhas receitas** (na Calculadora de craft) substituem o antigo slot único: agora dá para guardar várias receitas com nome próprio, carregar, renomear ou remover cada uma pela lista. Ficam em `receitas_salvas.json`, sem preços salvos junto. Se você já tinha uma receita no formato antigo (`receita_craft.json`), ela é importada automaticamente na primeira vez que abrir **Minhas receitas**, com o nome do equipamento; o arquivo antigo não é apagado, só renomeado para `.json.migrated`.
