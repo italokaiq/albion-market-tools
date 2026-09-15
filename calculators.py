@@ -4,8 +4,7 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import ttk
 from economics import flipping, crafting
-from trading import city_id, CITIES
-from market_view import age_text
+from trading import CITIES
 from ui_design import disclosure,result_table,fill_results
 from craft_prices import CraftPrices
 

@@ -1,6 +1,5 @@
 """Exportação periódica fora da thread da interface. Arquivo substituído atomicamente."""
 import json
-import os
 import subprocess
 import threading
 import time

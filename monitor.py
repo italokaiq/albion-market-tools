@@ -6,7 +6,6 @@ import threading
 import time
 from pathlib import Path
 import tkinter as tk
-from tkinter import ttk
 
 DB = Path(__file__).with_name('mercado.sqlite3')
 HOST = 'nats.albion-online-data.com'
