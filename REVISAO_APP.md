@@ -1,3 +1,23 @@
+# Revisão do aplicativo — 15/09/2026 (parte 12)
+
+## Rotas de flipping ampliadas pela API
+
+Pergunta direta do usuário depois da comparação com a AFM: "por que o site tem vários itens de flipping e o meu app não tem nenhum?" Investigado com o banco real, não hipótese.
+
+**Diagnóstico**: com ~370 mil ordens no banco, o fluxo AODP local sozinho tinha só 5 rotas calculáveis (0 positivas) em 60 min — 388 de 489 variantes de equipamento (79%) tinham só oferta de venda, sem pedido de compra em cidade nenhuma. A mesma lista de itens via API agregada tinha rota possível em 82% dos casos. Isso confirma: sites estabelecidos (AFM) consultam o banco agregado central do AODP, não dependem de um único fluxo ao vivo local.
+
+**Duas iterações até funcionar de verdade:**
+1. `route_enrichment.py` (`RouteEnrichment`, mesmo padrão de `PriceAPI`/`PriceHistory`): consulta em lote via `MarketService.get_many()` (já com throttle/cache/lock) os itens que o fluxo já observou, em segundo plano, a cada 60s. Mesclado no parâmetro `api` de `snapshot()`. **Não bastou** — rotas continuaram em 5, porque `trading.snapshot()` exigia `amount is not None` (quantidade conhecida) pra considerar um preço em qualquer rota, e a API nunca informa quantidade — rejeitando 100% dos dados de API por design.
+2. Corrigido `trading.snapshot()`: quantidade vira `None` (não inventada) quando só há dado da API, em vez de rejeitar o preço inteiro. Isso quebrou `use_route()` em `calculators.py` (fazia `float() * None`, travaria) — corrigido com fallback de quantidade=1 e aviso explícito "Volume desconhecido (via API)". Testado de novo com o banco real: **5 rotas → 425 rotas, 0 → 76 positivas**, em 1440 min.
+
+**Achado adicional durante a validação**: a API reflete a última observação por cidade, que pode ter até ~22h para itens pouco negociados (diferente do fluxo, que é contínuo) — então o filtro de idade máxima do próprio usuário precisa ser amplo o bastante pra deixar passar esse dado; com 60 min quase nada da API passa, com 1440 min a cobertura completa aparece.
+
+Rotas com volume desconhecido aparecem marcadas como tal na tabela ("Qtd. limite: desconhecido (API)"), nunca com um número inventado — mesmo princípio já usado no gráfico individual e na simulação de referência.
+
+Atualizado um teste existente (`test_reconciled_routes.py`) que verificava o comportamento antigo (rota some quando só há dado da API) para o novo, correto (rota aparece com o preço reconciliado e volume `None`, nunca com o lucro antigo/otimista nem volume inventado).
+
+Validação: 168 → 177 testes, incluindo o novo módulo testado sem tocar rede real, e dois testes novos em `test_trading.py` (rota via API com volume desconhecido; rota com volume conhecido vencendo empate de lucro contra rota via API).
+
 # Revisão do aplicativo — 15/09/2026 (parte 11)
 
 ## QA comparativo com o Albion Free Market

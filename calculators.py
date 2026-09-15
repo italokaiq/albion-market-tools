@@ -214,12 +214,14 @@ class Calculators(CraftPrices):
                     route=None
                     break
         if route:
-            for key,value in [('buy',route['buy']['price']),('sell',route['sell']['price']),('quantity',route['quantity']),('buy_mode','Imediata'),('sell_mode','Imediata')]:
+            quantity=route['quantity'] if route['quantity'] is not None else 1
+            for key,value in [('buy',route['buy']['price']),('sell',route['sell']['price']),('quantity',quantity),('buy_mode','Imediata'),('sell_mode','Imediata')]:
                 self.flip_fields[key].set(value)
-            self.flip_fields['transport'].set(str(float(self.app.transport.get().replace(',','.'))*route['quantity']))
+            self.flip_fields['transport'].set(str(float(self.app.transport.get().replace(',','.'))*quantity))
             self.flip_observation=(self.flip_fields['buy'].get(),self.flip_fields['sell'].get(),
                                    min(route['buy']['seen'],route['sell']['seen']),route['quantity'])
-            self.flip_note.config(text=f"{route['code']} · {route['quality_name']} · {route['origin']} para {route['destination']} · Copiado às {time.strftime('%H:%M:%S')}. Preços válidos até o limite de idade configurado.")
+            unknown=' Volume desconhecido (via API): sem garantia de execução ou de lote disponível.' if route['quantity'] is None else ''
+            self.flip_note.config(text=f"{route['code']} · {route['quality_name']} · {route['origin']} para {route['destination']} · Copiado às {time.strftime('%H:%M:%S')}. Preços válidos até o limite de idade configurado.{unknown}")
             return
         self.use_reference_margin()
 

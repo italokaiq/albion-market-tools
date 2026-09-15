@@ -174,6 +174,16 @@ Linhas em branco são ignoradas silenciosamente; uma linha parcialmente preenchi
 
 Validação: 167 testes passaram, incluindo o cálculo isolado de cada linha (comparando com/sem Premium, modo imediato/ordem, vírgula decimal) e o formulário completo — registro simultâneo de várias linhas, linhas em branco ignoradas, erro que preserva a linha.
 
+## Rotas de flipping ampliadas pela API — 15/09/2026
+
+Medido antes de mexer: com o banco de produção real (~370 mil ordens), o fluxo AODP local sozinho gerava só **5 rotas calculáveis, nenhuma com margem positiva** — a maioria dos itens observados (quase 80%) só tinha oferta de venda, sem pedido de compra em nenhuma cidade. A mesma lista de itens consultada na API agregada das Américas (a mesma fonte que sites como o Albion Free Market usam) tinha rota possível em **82% dos casos**.
+
+Agora, além do item selecionado no gráfico, o app consulta a API em lote (em segundo plano, respeitando o limite de 40 itens/2s já existente) para os itens que o fluxo já observou, e usa isso para completar rotas que o fluxo sozinho não tem dados suficientes para montar. Como a API não informa quantidade disponível, essas rotas aparecem com **"Qtd. limite: desconhecido (API)"**, nunca com um número inventado — continuam calculadas, só com o aviso explícito de que não há confirmação de volume.
+
+**Importante**: a API reflete a última observação registrada por cidade, que pode ter várias horas (até ~24h) para itens negociados com menos frequência — bem diferente do fluxo ao vivo, que é contínuo. Isso significa que o filtro **"Idade máxima"** afeta a cobertura da API tanto quanto a do fluxo: com 15 ou 60 minutos, pouca coisa da API passa no filtro; com 1440 min (24h), a cobertura completa aparece. Testado com o banco real: de 5 rotas (0 positivas) em 60 min para **425 rotas (76 positivas)** em 1440 min.
+
+Validação: 177 testes passaram, incluindo o novo módulo de enriquecimento em lote e a atualização do teste que verificava o comportamento antigo (rota sumia quando só havia dado da API) para o novo (rota aparece com volume desconhecido, nunca com o lucro antigo/otimista).
+
 ## Catálogo expandido após QA com o Albion Free Market — 15/09/2026
 
 Comparado o catálogo de busca com o [Albion Free Market](https://albionfreemarket.com) (ferramenta estabelecida, ~11.968 itens, mesma fonte AODP). Achado real, verificado contra a API antes de mudar qualquer coisa: diários e contratos de trabalhador tinham sido excluídos por suposição de não serem negociáveis. Contratos de trabalhador **têm histórico real de negociação** (confirmado via `/stats/history/`); diários realmente nunca são negociados. Adicionados ao catálogo: diários, contratos de trabalhador, bandeiras de cerco, itens de esconderijo, troféus de morte e tokens de recompensa — de 9.973 para 10.208 códigos pesquisáveis. Ferramentas de coleta, artefatos e itens de fazenda já estavam cobertos (conferido, não só assumido).

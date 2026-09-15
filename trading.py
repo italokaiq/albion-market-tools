@@ -62,20 +62,21 @@ def snapshot(rows, catalog, minutes=15, tax=0, transport=0, equipment_only=True,
             if 'offer' not in offers:
                 continue
             buy = offers['offer']
-            if buy.get('amount') is None or not 0<=now-buy['seen']<=minutes*60:continue
+            if not 0<=now-buy['seen']<=minutes*60:continue
             for destination, bids in v['markets'].items():
                 if origin == destination or 'request' not in bids:
                     continue
                 sell = bids['request']
-                if sell.get('amount') is None or not 0<=now-sell['seen']<=minutes*60:continue
+                if not 0<=now-sell['seen']<=minutes*60:continue
                 net = sell['price']*(1-tax)-buy['price']-transport
+                quantity=None if buy.get('amount') is None or sell.get('amount') is None else min(buy['amount'],sell['amount'])
                 candidates.append(dict(code=v['code'],name=v['name'],quality=v['quality'],
                     quality_name=v['quality_name'],enchantment=v['enchantment'],
                     origin=valid_ids[origin],destination=valid_ids[destination],buy=buy,sell=sell,
-                    quantity=min(buy['amount'],sell['amount']),net=net,
+                    quantity=quantity,net=net,
                     margin=net/buy['price']))
         if candidates:
-            routes.append(max(candidates,key=lambda r:(r['net'],r['quantity'],r['origin'],r['destination'])))
+            routes.append(max(candidates,key=lambda r:(r['net'],-1 if r['quantity'] is None else r['quantity'],r['origin'],r['destination'])))
     routes.sort(key=lambda r:(-r['net'],r['code'],r['quality']))
     return dict(generated=now,minutes=minutes,tax=tax,transport=transport,
                 equipment_only=equipment_only,cities=CITIES,

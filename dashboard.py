@@ -6,9 +6,10 @@ import os
 import math
 from tkinter import ttk
 from market_view import Catalog, QUALITY, age_text, freshness, filtered_orders, compare, sync_table
-from trading import snapshot, CITIES, selected_item_margin, api_city_name
+from trading import snapshot, CITIES, selected_item_margin, api_city_name, equipment
 from market_api import PriceAPI, combine_prices
 from price_history import PriceHistory, PERIODS
+from route_enrichment import RouteEnrichment
 from catalog_search import CatalogSearch
 from paths import data_path
 
@@ -38,6 +39,7 @@ class Dashboard(CatalogSearch):
         self.market_service=MarketService()
         self.price_api=PriceAPI(enabled=start_feed,service=self.market_service)
         self.price_history=PriceHistory(enabled=start_feed)
+        self.route_enrichment=RouteEnrichment(self.market_service,enabled=start_feed)
         root.title('Albion • Mercado Américas')
         root.geometry('1440x900')
         root.minsize(1000, 650)
@@ -326,12 +328,15 @@ class Dashboard(CatalogSearch):
             oldest = min(best[2] for best in sides.values())
             entries.append((json.dumps([item,q,e,loc]),values,freshness(oldest,now)))
         sync_table(self.comparison,entries)
+        observed_codes = {item for _,_,item,*_ in rows if not self.equipment_only.get() or equipment(item)}
+        self.route_enrichment.request(sorted(observed_codes)[:500])
         try:
             tax = float(self.tax.get().replace(',','.'))/100
             transport = float(self.transport.get().replace(',','.'))
             if not math.isfinite(tax) or not math.isfinite(transport):
                 raise ValueError()
-            data = snapshot(rows,self.catalog,int(f['minutes']),tax,transport,self.equipment_only.get(),now,api=self.price_api.all_prices())
+            enriched_api={**self.route_enrichment.all_prices(),**self.price_api.all_prices()}
+            data = snapshot(rows,self.catalog,int(f['minutes']),tax,transport,self.equipment_only.get(),now,api=enriched_api)
             data['filters'] = f
             self.current_snapshot = data
             matrix_entries = []
@@ -345,13 +350,14 @@ class Dashboard(CatalogSearch):
                         [name(v['code'],v['enchantment']),v['quality_name'],label]+prices,freshness(min(available),now)))
             sync_table(self.matrix,matrix_entries)
             visible_routes = [r for r in data['routes'] if not self.positive_only.get() or r['net']>0]
+            quantity_text = lambda r: r['quantity'] if r['quantity'] is not None else 'desconhecido (API)'
             sync_table(self.routes,[(json.dumps([r['code'],r['quality'],r['enchantment']]),
                 [name(r['code'],r['enchantment']),r['quality_name'],r['origin'],money(r['buy']['price']),
-                 r['destination'],money(r['sell']['price']),silver(r['net']),r['quantity'],
+                 r['destination'],money(r['sell']['price']),silver(r['net']),quantity_text(r),
                  age_text(min(r['buy']['seen'],r['sell']['seen']),now)],
                  freshness(min(r['buy']['seen'],r['sell']['seen']),now)) for r in visible_routes[:500]])
             self.update_overview(data,visible_routes,now)
-            self.export_status.config(text=f'Rotas imediatas: {self.profile.get()} • Taxa de venda {self.tax.get()}% • Ordens e craft: use as calculadoras.')
+            self.export_status.config(text=f'Rotas imediatas: {self.profile.get()} • Taxa de venda {self.tax.get()}% • Ordens e craft: use as calculadoras. • {self.route_enrichment.message}')
         except ValueError:
             self.current_snapshot = None
             sync_table(self.routes,[])
@@ -395,7 +401,8 @@ class Dashboard(CatalogSearch):
         self.metrics['positive'].config(text=str(len(positive)))
         self.metrics['best'].config(text=silver(positive[0]['net']) if positive else '—')
         entries=[(json.dumps([r['code'],r['quality'],r['enchantment']]),
-            [f"{r['name']} {r['code'].split('_')[0]}.{r['enchantment']} · {r['quality_name']}",r['origin'],r['destination'],silver(r['net']),r['quantity']],
+            [f"{r['name']} {r['code'].split('_')[0]}.{r['enchantment']} · {r['quality_name']}",r['origin'],r['destination'],silver(r['net']),
+             r['quantity'] if r['quantity'] is not None else 'desconhecido (API)'],
             freshness(min(r['buy']['seen'],r['sell']['seen']),now)) for r in routes[:100]]
         if self.overview_mode.get()=='Equipamentos coletados':
             headings=['Equipamento','Comprar por','Vender por','Melhor rota / un.','Mercados']

@@ -36,6 +36,24 @@ class TradingTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             snapshot([],Catalog(),tax=1.1)
 
+    def test_api_only_side_creates_route_with_unknown_quantity(self):
+        """API amplia a cobertura de rotas, mas nunca inventa volume: quantity fica None."""
+        rows=[self.row(1,7,'offer',100)]
+        api={('T4_MAIN_SWORD',1):{'1002':{'request':dict(price=200,seen=1000,amount=None,source='API')}}}
+        r=snapshot(rows,Catalog(),tax=.08,now=1000,api=api)['routes'][0]
+        self.assertEqual((r['origin'],r['destination']),('Thetford','Lymhurst'))
+        self.assertIsNone(r['quantity'])
+        self.assertAlmostEqual(r['net'],200*.92-100)
+
+    def test_known_quantity_route_preferred_over_unknown_on_net_tie(self):
+        """Mesmo lucro em duas cidades de destino: a rota com volume confirmado pelo
+        fluxo vence o desempate contra a rota só com preço da API (volume desconhecido)."""
+        rows=[self.row(1,7,'offer',100),self.row(2,1002,'request',200,amount=5)]
+        api={('T4_MAIN_SWORD',1):{'3005':{'request':dict(price=200,seen=1000,amount=None,source='API')}}}
+        r=snapshot(rows,Catalog(),tax=.08,now=1000,api=api)['routes'][0]
+        self.assertEqual(r['destination'],'Lymhurst')
+        self.assertEqual(r['quantity'],3)
+
     def test_item_markets_works_for_any_code_regardless_of_equipment(self):
         rows=[('1','7','T4_PLANKS',1,0,'offer',50,100,999),
               ('2','1002','T4_PLANKS',1,0,'request',70,40,999),
