@@ -100,14 +100,19 @@ def plan_production(materials,recipes,prices,product,quality,crafts,output,setti
         rrr,station=terms
         economic=crafts*(sum(m['quantity']*(o['cost']-(o['return_value']*rrr if m['returns'] else 0)) for m,o in choices)+station+recipe_silver)
         cash=crafts*(sum(float(m['quantity'])*o['cash'] for m,o in choices)+station+recipe_silver)
+        material_shortfalls=[dict(material=m['code'],method=o['method'],city=o['city'],required=m['quantity']*crafts,available=o['amount'])
+            for m,o in choices if o.get('amount') is not None and o['amount']<m['quantity']*crafts]
         for dest,_ in CITIES:
             p=price(product,quality,dest,sell_side)
             if not p:continue
             transport=crafts*output*shipping if city!=dest else 0
             revenue=p['price']*crafts*output
             net=revenue*(1-tax-(SETUP_FEE if sell_order else 0))-economic-transport
+            shortfalls=list(material_shortfalls)
+            if p.get('amount') is not None and p['amount']<crafts*output:
+                shortfalls.append(dict(material=product,method='Venda',city=dest,required=crafts*output,available=p['amount']))
             rows.append(dict(city=city,destination=dest,net=net,cost=economic+transport,
-                cash=cash+transport,revenue=revenue,choices=choices,sale=p,
+                cash=cash+transport,revenue=revenue,choices=choices,sale=p,shortfalls=shortfalls,
                 seen=min([p['seen']]+[o['seen'] for _,o in choices])))
     for city,_ in CITIES:
         p=price(product,quality,city,sell_side)

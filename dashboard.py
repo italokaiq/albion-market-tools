@@ -398,11 +398,9 @@ class Dashboard(CatalogSearch):
         self.notebook.select(self.calculators.flip)
         self.calculators.refresh()
 
-    def draw_chart(self):
-        canvas=self.chart
-        canvas.delete('all')
+    def selected_markets(self):
+        """Preços por cidade do item selecionado (fluxo + API), única fonte usada pelo gráfico e pela simulação."""
         data=self.current_snapshot
-        w=max(canvas.winfo_width(),400);h=max(canvas.winfo_height(),260)
         variant=next((v for v in data['variants'] if (v['code'],v['quality'],v['enchantment'])==self.selected_variant),None) if data else None
         if variant is None and self.selected_variant is not None and self.selected_variant==self.catalog_selection:
             code,quality,enchant=self.selected_variant
@@ -413,6 +411,15 @@ class Dashboard(CatalogSearch):
         api_prices,api_message=self.price_api.read(self.selected_variant)
         self.api_status.configure(text=api_message)
         if variant is None:
+            return None
+        return dict(variant,markets=combine_prices(variant['markets'],api_prices))
+
+    def draw_chart(self):
+        canvas=self.chart
+        canvas.delete('all')
+        w=max(canvas.winfo_width(),400);h=max(canvas.winfo_height(),260)
+        variant=self.selected_markets()
+        if variant is None:
             self.selected_margin.configure(text='')
             sync_table(self.city_compare,[])
             canvas.create_text(20,30,anchor='nw',width=w-40,fill='#CFDCEC',font=('Segoe UI',12),
@@ -420,7 +427,7 @@ class Dashboard(CatalogSearch):
             return
         canvas.create_text(15,10,anchor='nw',width=w-30,fill='#FFFFFF',font=('Segoe UI',11,'bold'),
             text=f"{variant['name']} {variant['code'].split('_')[0]}.{variant['enchantment']} · {variant['quality_name']}")
-        markets=combine_prices(variant['markets'],api_prices)
+        markets=variant['markets']
         try:
             margin=selected_item_margin(markets,float(self.tax.get().replace(',','.'))/100,
                 float(self.transport.get().replace(',','.')),int(self.filters['minutes'].get())*60,time.time())

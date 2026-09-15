@@ -4,7 +4,7 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import ttk
 from economics import flipping, crafting
-from trading import CITIES
+from trading import CITIES, selected_item_margin
 from ui_design import disclosure,result_table,fill_results
 from craft_prices import CraftPrices
 
@@ -207,17 +207,42 @@ class Calculators(CraftPrices):
                 if remote and remote['seen']>route[field]['seen']:
                     route=None
                     break
-        if route is None:
+        if route:
+            for key,value in [('buy',route['buy']['price']),('sell',route['sell']['price']),('quantity',route['quantity']),('buy_mode','Imediata'),('sell_mode','Imediata')]:
+                self.flip_fields[key].set(value)
+            self.flip_fields['transport'].set(str(float(self.app.transport.get().replace(',','.'))*route['quantity']))
+            self.flip_observation=(self.flip_fields['buy'].get(),self.flip_fields['sell'].get(),
+                                   min(route['buy']['seen'],route['sell']['seen']),route['quantity'])
+            self.flip_note.config(text=f"{route['code']} · {route['quality_name']} · {route['origin']} para {route['destination']} · Copiado às {time.strftime('%H:%M:%S')}. Preços válidos até o limite de idade configurado.")
+            return
+        self.use_reference_margin()
+
+    def use_reference_margin(self):
+        """Sem rota com volume conhecido do fluxo: usa a mesma margem do gráfico (pode incluir API, sem volume)."""
+        variant=self.app.selected_markets()
+        margin=None
+        if variant:
+            try:
+                margin=selected_item_margin(variant['markets'],float(self.app.tax.get().replace(',','.'))/100,
+                    float(self.app.transport.get().replace(',','.')),int(self.app.filters['minutes'].get())*60,time.time())
+            except ValueError:margin=None
+        if margin is None:
             self.flip_observation=None
             self.flip_fields['buy'].set('');self.flip_fields['sell'].set('')
             self.flip_note.config(text='Não há rota com preços e volume conhecidos para este item. A API não informa quantidade; consulte uma rota coletada ou informe preços manualmente.')
             return
-        for key,value in [('buy',route['buy']['price']),('sell',route['sell']['price']),('quantity',route['quantity']),('buy_mode','Imediata'),('sell_mode','Imediata')]:
+        cities=dict(CITIES)
+        buy_price=variant['markets'][margin['origin']]['offer']
+        sell_price=variant['markets'][margin['destination']]['request']
+        quantity=margin['quantity'] or 1
+        for key,value in [('buy',buy_price['price']),('sell',sell_price['price']),('quantity',quantity),('buy_mode','Imediata'),('sell_mode','Imediata')]:
             self.flip_fields[key].set(value)
-        self.flip_fields['transport'].set(str(float(self.app.transport.get().replace(',','.'))*route['quantity']))
+        self.flip_fields['transport'].set(str(float(self.app.transport.get().replace(',','.'))*quantity))
         self.flip_observation=(self.flip_fields['buy'].get(),self.flip_fields['sell'].get(),
-                               min(route['buy']['seen'],route['sell']['seen']),route['quantity'])
-        self.flip_note.config(text=f"{route['code']} · {route['quality_name']} · {route['origin']} para {route['destination']} · Copiado às {time.strftime('%H:%M:%S')}. Preços válidos até o limite de idade configurado.")
+                               min(buy_price['seen'],sell_price['seen']),margin['quantity'])
+        unknown=' Volume desconhecido: preço vem da API, sem garantia de execução.' if margin['quantity'] is None else ''
+        self.flip_note.config(text=f"Simulação de referência (mesma margem do gráfico): {cities.get(margin['origin'],margin['origin'])} → "
+            f"{cities.get(margin['destination'],margin['destination'])} · Copiado às {time.strftime('%H:%M:%S')}.{unknown}")
 
     def save_recipe(self):
         data=dict(fields={k:v.get() for k,v in self.craft_fields.items()},materials=[{k:v.get() for k,v in m.items()} for _,m in self.materials])
@@ -262,7 +287,7 @@ class Calculators(CraftPrices):
                     if observed_buy or observed_sell:
                         raise ValueError('Os preços da rota expiraram. Selecione uma rota recente; edições manuais foram preservadas.')
                 if observed_buy and observed_sell:
-                    if f['buy_mode']=='Imediata' and f['sell_mode']=='Imediata' and float(f['quantity'].replace(',','.'))>volume:
+                    if volume is not None and f['buy_mode']=='Imediata' and f['sell_mode']=='Imediata' and float(f['quantity'].replace(',','.'))>volume:
                         raise ValueError(f'Quantidade acima do volume observado ({volume}). Reduza o lote ou obtenha novas ordens.')
                 else:
                     if not observed_buy and not observed_sell:self.flip_observation=None
@@ -278,7 +303,10 @@ class Calculators(CraftPrices):
                 ('break_even','Venda de equilíbrio / un.',money),('sale_tax','Imposto sobre a venda',money),
                 ('buy_fee','Criação de ordem de compra',money),('sell_fee','Criação de ordem de venda',money)]])
             known=self.flip_observation
-            volume=f'Volume observado: até {known[3]} un.' if known and f['buy']==known[0] and f['sell']==known[1] and f['buy_mode']=='Imediata' and f['sell_mode']=='Imediata' else 'Volume disponível não confirmado.'
+            matches_known=known and f['buy']==known[0] and f['sell']==known[1] and f['buy_mode']=='Imediata' and f['sell_mode']=='Imediata'
+            if matches_known and known[3] is not None:volume=f'Volume observado: até {known[3]} un.'
+            elif matches_known:volume='Volume desconhecido (referência via API); sem garantia de execução.'
+            else:volume='Volume disponível não confirmado.'
             self.flip_result.config(text=f"Lote: {f['quantity']} un. · Transporte total: {money(float(f['transport'].replace(',','.')))} prata · {volume}\nResultado estimado; ordens dependem de execução.")
         except ValueError as e:
             self.flip_result.config(text=str(e));fill_results(self.flip_table,[])

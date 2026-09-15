@@ -135,6 +135,16 @@ Cidades e etapas sem custos completos são excluídas, não consideradas piores.
 
 Validação: consulta real da cadeia T4_MAIN_AXE com 13 códigos retornou 168 preços (não necessariamente todos dentro do limite de idade). Testes cobrem taxas dos dois perfis, compra versus refino, custo bruto versus retorno esperado, tier inferior ausente, receitas encantadas, transporte, validade de preços e invalidação da interface.
 
+## Planejador proativo e cobertura de volume — 15/09/2026
+
+O topo do planejador mostra uma recomendação (**"Melhor opção avaliada: craft em X → vender em Y · lucro esperado Z"**) separada do que ainda falta configurar; a melhor rota é selecionada automaticamente para mostrar a cadeia de materiais sem exigir clique. O planejador volta a ler o banco local a cada recálculo e consulta a API automaticamente a cada 60 segundos (mesmo limite de sempre), sem exigir clique em "Atualizar"; o status distingue "Recalculado às" de "Preços atualizados às".
+
+A comparação agora sinaliza quando a opção mais barata de um material — ou a venda do produto — tem **volume observado insuficiente** para o lote configurado, em vez de ignorar essa informação. A tabela de rotas ganhou a coluna "Cobertura de volume" e a rota selecionada detalha qual material falta e em qual cidade.
+
+Na calculadora de flipping, **Usar rota selecionada** e o gráfico da Visão geral passaram a usar a mesma fonte de preços por cidade. Sem uma rota do fluxo com volume conhecido, a calculadora oferece uma simulação de referência com a mesma margem do gráfico (que pode incluir preços da API), claramente identificada como volume desconhecido e sem limite de lote artificial.
+
+Validação: 87 testes passaram.
+
 ## Perfis, recuperação e diagnóstico
 
 O planejador oferece **Salvar perfil** e **Carregar perfil**, com nome escolhido por você. São armazenados o contexto da receita/lote/qualidade/modos e os custos informados. Preços não são salvos no perfil. Um perfil de outro contexto é recusado; após carregar, confira a data e os custos e use **Confirmar custos e comparar**. Os perfis ficam em `perfis_producao.json`, com versão de formato para permitir futuras migrações. Formatos não suportados são rejeitados sem sobrescrever o arquivo.

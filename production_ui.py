@@ -16,7 +16,7 @@ class ProductionPlanner:
         self.c=calculator;self.app=calculator.app;self.window=None;self.jobs=queue.Queue()
         self.recipes=refining_recipes();self.generation=0;self.busy=False;self.last_request=0
         self.data={};self.rows=[];self.settings={};self.timer=None
-        self.api_error='';self.pending_fetch=False;self.last_age=None
+        self.api_error='';self.pending_fetch=False;self.last_age=None;self.last_price_update=None
         self.profiles=ProductionProfiles();self.profile_pending=False
 
     def signature(self):
@@ -60,7 +60,10 @@ class ProductionPlanner:
         ttk.Combobox(toolbar,textvariable=self.app.filters['minutes'],values=('5','15','30','60','240','1440'),state='readonly',width=6).pack(side='left')
         self.status=ttk.Label(frame,wraplength=1080);self.status.pack(anchor='w',pady=5)
         summary=ttk.Frame(frame,padding=10);summary.pack(fill='x',pady=6)
-        ttk.Label(summary,text='Seu próximo passo',font=('Segoe UI',11,'bold')).pack(anchor='w')
+        self.recommendation=ttk.Label(summary,text='Ainda sem recomendação — preencha os custos em Custos e retornos.',
+                                       font=('Segoe UI',13,'bold'),wraplength=1020)
+        self.recommendation.pack(anchor='w')
+        ttk.Label(summary,text='O que falta / próximo passo',foreground='#A3B5CB').pack(anchor='w',pady=(8,0))
         self.next_step=ttk.Label(summary,text='1. Consulte preços → 2. Confirme custos → 3. Compare as alternativas.',wraplength=1020)
         self.next_step.pack(anchor='w',pady=3)
         tabs=ttk.Notebook(frame);tabs.pack(fill='both',expand=True)
@@ -94,7 +97,8 @@ class ProductionPlanner:
             for col,var in enumerate(variables,1):ttk.Entry(grid,textvariable=var,width=24).grid(row=row,column=col,padx=8,pady=4)
         self.stage_box.bind('<<ComboboxSelected>>',self.change_stage)
         ttk.Button(settings,text='Confirmar custos e comparar',command=self.confirm_costs).pack(anchor='w',pady=10)
-        self.route_table=self.app.make_table(tabs,'2. Craft e venda',[('Craftar em',140),('Vender em',140),('Lucro esperado',140),('Custo econômico',145),('Desembolso bruto¹',145),('Idade',85)])
+        self.route_table=self.app.make_table(tabs,'2. Craft e venda',[('Craftar em',140),('Vender em',140),('Lucro esperado',140),('Custo econômico',145),('Desembolso bruto¹',145),('Idade',85),('Cobertura de volume',150)])
+        self.route_table.tag_configure('shortfall',foreground='#F4D08B')
         ttk.Button(summary,text='Ver comparação',command=lambda:tabs.select(1)).pack(anchor='w')
         self.supply_table=self.app.make_table(tabs,'3. Comprar ou refinar',[('Material',235),('Entregar em',130),('Alternativa',130),('Comprar/refinar em',150),('Custo/un.',100),('Desembolso/un.¹',140)])
         self.market_table=self.app.make_table(tabs,'4. Preços observados',[('Item',290),('Cidade',130),('Lado',100),('Prata/un.',100),('Idade',85),('Fonte / volume',170)])
@@ -142,12 +146,15 @@ class ProductionPlanner:
         for city,variables in self.editors.items():
             for var,value in zip(variables,self.settings.get((self.stage.get(),city),('',''))):var.set(value)
 
-    def fetch(self):
-        if self.context!=self.signature():self.status.config(text='Receita, lote ou perfil mudou. Reabra o comparador para atualizar.');return
+    def refresh_local_rows(self):
         marks=','.join('?' for _ in self.codes)
         self.rows=self.app.con.execute('SELECT * FROM orders WHERE item IN ('+marks+') AND seen>=?',[*self.codes,time.time()-int(self.app.filters['minutes'].get())*60]).fetchall()
         self.by_code={}
         for row in self.rows:self.by_code.setdefault(row[2],[]).append(row)
+
+    def fetch(self):
+        if self.context!=self.signature():self.status.config(text='Receita, lote ou perfil mudou. Reabra o comparador para atualizar.');return
+        self.refresh_local_rows()
         self.calculate()
         if not self.app.export_enabled:return
         if self.busy or time.time()-self.last_request<60:
@@ -173,7 +180,7 @@ class ProductionPlanner:
                 if error:
                     self.api_error='Falha na API: '+error+'.'
                     self.calculate()
-                else:self.data=data;self.calculate()
+                else:self.data=data;self.last_price_update=time.time();self.calculate()
         except queue.Empty:pass
         if self.context!=self.signature():
             self.result=None
@@ -183,11 +190,17 @@ class ProductionPlanner:
             self.status.config(text='Comparação invalidada: reabra para usar a receita, lote e perfil atuais.')
             self.next_step.config(text='A receita, o lote ou o perfil mudou. Reabra o planejador para atualizar a comparação.')
         elif self.pending_fetch and not self.busy and time.time()-self.last_request>=60:self.fetch()
-        elif self.last_age!=self.app.filters['minutes'].get() or self.last_render is None or time.time()-self.last_render>=5:self.calculate()
+        elif self.app.export_enabled and not self.busy and time.time()-self.last_request>=60:self.fetch()
+        elif self.last_age!=self.app.filters['minutes'].get() or self.last_render is None or time.time()-self.last_render>=5:
+            self.refresh_local_rows();self.calculate()
         self.timer=self.app.root.after(1000,self.poll)
 
     def set_detail(self,text):
         self.detail.config(state='normal');self.detail.delete('1.0','end');self.detail.insert('1.0',text);self.detail.config(state='disabled')
+
+    def timestamps_line(self):
+        updated=time.strftime('%H:%M:%S',time.localtime(self.last_price_update)) if self.last_price_update else 'ainda não consultados'
+        return f'Recalculado às {time.strftime("%H:%M:%S")} · Preços atualizados às {updated}.'
 
     def calculate(self):
         if self.window is None or self.context!=self.signature():return
@@ -214,33 +227,53 @@ class ProductionPlanner:
             self.result=plan_production(self.materials,self.recipes,prices,self.product,int(self.f['quality']),self.f['crafts'],self.f['output'],valid,self.shipping.get(),self.app.profile.get()=='Premium',self.f['buy_mode']!='Imediata',self.f['sell_mode']!='Imediata',silver)
         except ValueError as error:
             self.next_step.config(text=str(error)+' Preencha os campos em Custos e retornos; zero só deve ser informado se for sua condição real.')
-            self.result=None;self.status.config(text=self.api_error+' '+str(error)+' Preços disponíveis na aba 4.')
+            self.result=None;self.status.config(text=self.timestamps_line()+' '+self.api_error+' '+str(error)+' Preços disponíveis na aba 4.')
             for table in (self.route_table,self.supply_table):
                 if table.get_children():table.delete(*table.get_children())
             self.set_detail('Preencha custos válidos para comparar. Nenhum custo ausente é tratado como zero.');return
         routes=self.result['routes'];supply=self.result['supply']
-        sync_table(self.route_table,[(r['city']+':'+r['destination'],(names[r['city']],names[r['destination']],money(r['net']),money(r['cost']),money(r['cash']),age_text(r['seen'],now)),'fresh' if r['net']>0 else 'old') for r in routes])
+        def volume_coverage_text(r):
+            return 'Completa' if not r['shortfalls'] else f"Parcial: {len(r['shortfalls'])} item(ns) sem volume suficiente"
+        def route_tag(r):
+            if r['shortfalls']:return 'shortfall'
+            return 'fresh' if r['net']>0 else 'old'
+        sync_table(self.route_table,[(r['city']+':'+r['destination'],(names[r['city']],names[r['destination']],money(r['net']),money(r['cost']),money(r['cash']),age_text(r['seen'],now),volume_coverage_text(r)),route_tag(r)) for r in routes])
         sync_table(self.supply_table,[(str(i),(self.app.catalog.item(r['material']),names[r['destination']],r['method'],names[r['city']],money(r['cost']),money(r['cash'])),'fresh') for i,r in enumerate(supply)])
         count=sum(('craft',city) in valid for city,_ in PRODUCTION_CITIES)
         ref_count=sum(key[0]!='craft' for key in valid)
         missing=self.result['missing']
         if count==0:
+            self.recommendation.config(text='Ainda sem recomendação.',foreground='#A3B5CB')
             self.next_step.config(text='Confirme retorno e custo da estação em pelo menos uma cidade de craft. As outras cidades permanecem fora da avaliação.')
         elif missing:
+            self.recommendation.config(text='Ainda sem recomendação.',foreground='#A3B5CB')
             self.next_step.config(text='Faltam preços para: '+', '.join(self.app.catalog.item(c) for c in missing)+'. Consulte Preços observados ou atualize a coleta.')
         elif not routes:
+            self.recommendation.config(text='Ainda sem recomendação.',foreground='#A3B5CB')
             self.next_step.config(text='Não há preço de venda recente para concluir a comparação. Confira qualidade, modo de venda e idade máxima.')
         else:
             best=routes[0]
             coverage='Parcial' if count<7 else 'Craft: sete cidades configuradas'
+            shortfall_note=''
+            if best['shortfalls']:
+                items=', '.join(f"{self.app.catalog.item(s['material'])} (precisa {s['required']:g}, disponível {s['available']:g} em {names[s['city']]})" for s in best['shortfalls'])
+                shortfall_note=f' Atenção: a melhor opção não tem volume observado suficiente para {items}. Divida a compra entre cidades ou reduza o lote.'
+            if best['net']>0:
+                self.recommendation.config(text=f"Melhor opção avaliada: craft em {names[best['city']]} → vender em {names[best['destination']]} · "
+                    f"lucro econômico esperado {money(best['net'])} prata"+(' · cobertura de volume parcial' if best['shortfalls'] else ''),
+                    foreground='#8EDFC3')
+            else:
+                self.recommendation.config(text=f"Nenhuma opção avaliada tem lucro positivo. A menos ruim: craft em {names[best['city']]} → "
+                    f"vender em {names[best['destination']]} · {money(best['net'])} prata.",foreground='#F0AAAA')
             self.next_step.config(text=f"{coverage} · {count}/7 cidades de craft · {ref_count}/{(len(self.stages)-1)*7} etapas/cidades de refino configuradas. "
-                +('Nenhuma opção avaliada tem lucro positivo. ' if best['net']<=0 else '')
-                +'Abra Ver comparação e selecione uma rota para conferir a cadeia de custos. Cobertura de preços pode ser incompleta.')
-        self.status.config(text=self.api_error+f' {len(prices)} preços dentro de {age//60} min · {count}/7 cidades de craft configuradas · {ref_count} etapas/cidades de refino configuradas · {len(routes)} rotas calculáveis. Melhor apenas entre opções com dados e custos preenchidos.')
+                +'Selecione uma rota abaixo para conferir a cadeia de custos. Cobertura de preços pode ser incompleta.'
+                +shortfall_note)
+        self.status.config(text=self.timestamps_line()+' '+self.api_error+f' {len(prices)} preços dentro de {age//60} min · {count}/7 cidades de craft configuradas · {ref_count} etapas/cidades de refino configuradas · {len(routes)} rotas calculáveis. Melhor apenas entre opções com dados e custos preenchidos.')
         if self.route_table.selection():self.show_route()
         elif routes:
             r=routes[0]
-            self.set_detail(f"Melhor entre opções avaliadas: craft em {names[r['city']]} → venda em {names[r['destination']]}: {money(r['net'])} prata de lucro econômico esperado.\nSelecione uma rota para ver compras e etapas de refino. Sem garantia de volume. Retornos não são prata recebida.")
+            self.route_table.selection_set(r['city']+':'+r['destination'])
+            self.show_route()
         else:self.set_detail('Sem rota calculável. Informe retorno e estação para ao menos uma cidade de craft e confira os preços da aba 4. Para comparar refino, configure também as etapas de material. Nenhuma cidade excluída é presumida pior.')
 
     def show_route(self,event=None):
@@ -254,5 +287,10 @@ class ProductionPlanner:
             for m,child in option['children']:show(child,qty*m['quantity']/option['output'],depth+1)
         for m,option in route['choices']:show(option,float(self.f['crafts'])*float(m['quantity']))
         lines.append(f"Craft: {names[route['city']]} → Venda: {names[route['destination']]} · {route['sale']['source']} · volume {route['sale']['amount'] if route['sale']['amount'] is not None else 'desconhecido'}")
+        if route['shortfalls']:
+            lines.append('Cobertura de volume insuficiente nesta rota:')
+            for s in route['shortfalls']:
+                lines.append(f"  {self.app.catalog.item(s['material'])} em {names[s['city']]}: precisa {s['required']:g}, volume observado {s['available']:g}. "
+                              'Divida a compra entre cidades/ordens ou reduza o lote.')
         lines.append('Quantidades brutas sem reutilizar retornos. Confirme disponibilidade no jogo; custos incluem transporte informado, taxas e retorno esperado.')
         self.set_detail('\n'.join(lines))

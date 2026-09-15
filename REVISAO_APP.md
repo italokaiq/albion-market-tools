@@ -1,4 +1,15 @@
-# Revisão do aplicativo — 15/09/2026
+# Revisão do aplicativo — 15/09/2026 (parte 2)
+
+## Coerência do craft/flipping e planejador mais proativo
+
+- **Gráfico e simulação agora usam a mesma fonte de preços.** Antes, o gráfico podia calcular uma margem usando a API enquanto "Simular rota selecionada" exigia uma rota do fluxo local com volume conhecido — podiam divergir, ou a simulação simplesmente recusava um item com margem visível no gráfico. `Dashboard.selected_markets()` passou a ser a única função que monta os preços por cidade do item selecionado; tanto o gráfico quanto a simulação partem dela. Quando não há rota com volume conhecido, a calculadora de flipping agora oferece uma **simulação de referência** com a mesma margem do gráfico, claramente identificada como "volume desconhecido" e sem o limite de lote que se aplica a rotas confirmadas.
+- **O planejador de produção atualiza sozinho.** Antes, ele buscava ordens locais e preços da API só na abertura ou quando o usuário clicava em "Atualizar preços e comparar"; o recálculo periódico (a cada 5s) reaproveitava dados antigos. Agora ele relê o banco local a cada recálculo e volta a consultar a API automaticamente a cada 60s (respeitando o mesmo limite de sempre), com o status distinguindo "Recalculado às" de "Preços atualizados às".
+- **Cobertura de volume aparece junto da recomendação.** `plan_production` agora sinaliza quando a opção mais barata de um material (ou a venda do produto) tem volume observado menor que o necessário para o lote, em vez de ignorar essa informação silenciosamente. A tabela de rotas ganhou uma coluna "Cobertura de volume", e a rota selecionada detalha exatamente qual material falta e em qual cidade.
+- **Recomendação em destaque.** O planejador ganhou um resumo de decisão no topo ("Melhor opção avaliada: craft em X → vender em Y · lucro esperado Z"), separado da lista do que falta configurar. A melhor rota é selecionada automaticamente ao recalcular, mostrando a cadeia de materiais sem exigir um clique a mais.
+
+Validação: 87 testes passaram, incluindo simulação de referência com volume desconhecido, atualização automática de ordens locais e da API sem clique manual, e cobertura de volume insuficiente (material e produto final).
+
+Itens de uma avaliação mais ampla que ficaram fora desta rodada, por exigir desenho próprio ou ferramentas que não tenho aqui (QA visual de DPI/redimensionamento, instalador, atualização automática do app, favoritos/histórico de operações): seguem pendentes, como já estava documentado.
 
 ## Busca e comparação em todo o catálogo; auditoria do craft
 

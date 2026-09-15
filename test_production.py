@@ -2,7 +2,7 @@ import time
 import tkinter as tk
 import unittest
 from production import refining_recipes,dependency_codes,plan_production
-from monitor import database,Feed
+from monitor import database,save_order,Feed
 from dashboard import Dashboard
 
 class ProductionTest(unittest.TestCase):
@@ -88,6 +88,30 @@ class ProductionRegressionTest(unittest.TestCase):
         self.assertEqual(r['routes'][0]['cash'],250)
     def test_empty_recipe_rejected(self):
         with self.assertRaises(ValueError):plan_production([],{}, {},'PRODUCT',1,1,1,{},0)
+    def test_shortfall_when_available_amount_below_required_quantity(self):
+        mats=[dict(code='BAR',quantity=2,returns=True)]
+        now=time.time()
+        prices={('BAR',1,'7','offer'):dict(price=100,seen=now,amount=1,source='Fluxo'),
+                ('PRODUCT',1,'1002','request'):dict(price=300,seen=now,amount=None,source='API')}
+        r=plan_production(mats,{},prices,'PRODUCT',1,5,1,{('craft','7'):(0,10)},0)['routes'][0]
+        self.assertEqual(len(r['shortfalls']),1)
+        self.assertEqual(r['shortfalls'][0],dict(material='BAR',method='Comprar recurso',city='7',required=10,available=1))
+    def test_no_shortfall_when_amount_covers_quantity_or_unknown(self):
+        mats=[dict(code='BAR',quantity=2,returns=True)]
+        now=time.time()
+        prices={('BAR',1,'7','offer'):dict(price=100,seen=now,amount=100,source='Fluxo'),
+                ('PRODUCT',1,'1002','request'):dict(price=300,seen=now,amount=None,source='API')}
+        r=plan_production(mats,{},prices,'PRODUCT',1,5,1,{('craft','7'):(0,10)},0)['routes'][0]
+        self.assertEqual(r['shortfalls'],[])
+    def test_sale_side_shortfall_is_flagged_too(self):
+        mats=[dict(code='BAR',quantity=2,returns=True)]
+        now=time.time()
+        prices={('BAR',1,'7','offer'):dict(price=100,seen=now,amount=100,source='Fluxo'),
+                ('PRODUCT',1,'1002','request'):dict(price=300,seen=now,amount=3,source='Fluxo')}
+        r=plan_production(mats,{},prices,'PRODUCT',1,5,1,{('craft','7'):(0,10)},0)['routes'][0]
+        self.assertEqual(len(r['shortfalls']),1)
+        self.assertEqual(r['shortfalls'][0]['material'],'PRODUCT')
+        self.assertEqual(r['shortfalls'][0]['method'],'Venda')
     def test_api_failure_stays_visible_and_cached_prices_survive_reopen(self):
         root=tk.Tk();root.withdraw();app=Dashboard(root,database(':memory:'),Feed(),start_feed=False)
         try:
@@ -100,4 +124,37 @@ class ProductionRegressionTest(unittest.TestCase):
             self.assertEqual(p.shipping.get(),'0')
             self.assertEqual(p.editors['7'][0].get(),'15')
             self.assertIn(('T4_PLANKS',1),p.data)
+        finally:app.close()
+
+    def test_poll_picks_up_new_local_orders_without_reopening(self):
+        """O planejador deve enxergar ordens novas do fluxo sem exigir clique manual em Atualizar."""
+        root=tk.Tk();root.withdraw();app=Dashboard(root,database(':memory:'),Feed(),start_feed=False)
+        try:
+            c=app.calculators;c.apply_recipe('T4_MAIN_AXE');c.open_production_planner();p=c.production_planner
+            self.assertEqual(len(p.rows),0)
+            save_order(app.con,dict(Id=1,LocationId=7,ItemTypeId='T4_PLANKS',QualityLevel=1,
+                                     EnchantmentLevel=0,AuctionType='offer',UnitPriceSilver=50,Amount=10))
+            p.last_render=0  # força o próximo poll() a recalcular
+            p.poll()
+            self.assertTrue(any(row[2]=='T4_PLANKS' for row in p.rows),
+                'ordem nova nao apareceu em p.rows apos poll() sem chamar fetch() manualmente')
+        finally:app.close()
+
+    def test_poll_refetches_api_automatically_after_throttle_window(self):
+        """Sem clique manual, o planejador deve re-consultar a API sozinho apos o intervalo minimo."""
+        root=tk.Tk();root.withdraw();app=Dashboard(root,database(':memory:'),Feed(),start_feed=False)
+        try:
+            c=app.calculators;c.apply_recipe('T4_MAIN_AXE');c.open_production_planner();p=c.production_planner
+            app.export_enabled=True  # simula modo com fluxo ativo, sem rede real
+            app.market_service.fetcher=lambda codes:{}
+            p.last_request=time.time()-61
+            p.busy=False
+            p.poll()
+            self.assertTrue(p.busy,'poll() nao disparou fetch() automatico apos 60s sem nova consulta')
+            for _ in range(50):
+                if not p.busy:break
+                time.sleep(0.05);p.poll()
+            self.assertFalse(p.busy)
+            self.assertIsNotNone(p.last_price_update)
+            self.assertIn('Preços atualizados',p.status.cget('text'))
         finally:app.close()

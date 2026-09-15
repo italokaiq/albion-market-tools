@@ -58,6 +58,23 @@ class CatalogIntegrationTest(unittest.TestCase):
         self.assertEqual(rows['Lymhurst'][3],'70,00')
         self.assertIn('Melhor margem estimada',self.app.selected_margin.cget('text'))
 
+    def test_route_simulation_falls_back_to_chart_margin_with_unknown_volume(self):
+        """Sem rota do fluxo (volume conhecido), a simulação usa a mesma margem do gráfico, via API."""
+        c=self.app.calculators
+        self.app.select_catalog_item('T4_MAIN_SWORD',1)
+        self.app.price_api.cache[('T4_MAIN_SWORD',1)]={
+            '7':{'offer':dict(price=100,seen=__import__('time').time(),amount=None,source='API')},
+            '1002':{'request':dict(price=200,seen=__import__('time').time(),amount=None,source='API')}}
+        self.app.open_route_summary()
+        self.assertEqual(c.flip_fields['buy'].get(),'100')
+        self.assertEqual(c.flip_fields['sell'].get(),'200')
+        self.assertIn('Simulação de referência',c.flip_note.cget('text'))
+        self.assertIn('Volume desconhecido',c.flip_note.cget('text'))
+        self.assertTrue(c.flip_table.get_children())
+        c.flip_fields['quantity'].set('999999')
+        c.refresh()
+        self.assertTrue(c.flip_table.get_children(),'quantidade grande não deveria travar quando o volume e desconhecido')
+
     def test_search_filters_by_tier_and_enchantment(self):
         codes=self.app.catalog.market_codes
         matches=search_catalog(codes,self.app.catalog,'espada',tier='4',enchant='2')
