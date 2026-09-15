@@ -1,0 +1,9 @@
+__pycache__/
+*.sqlite3*
+node_modules/
+outputs/
+preferencias.json
+receita_craft.json
+perfis_producao.json
+*.json.bak
+logs/
