@@ -48,6 +48,35 @@ class ComparisonTest(unittest.TestCase):
         self.assertEqual(filtered_orders(con,catalog,1000,5,tier='8'),[])
         con.close()
 
+    def test_limit_caps_rows_keeping_the_most_recent(self):
+        """Regressão: sem limite, uma janela de idade máxima grande reprocessa o banco
+        inteiro a cada atualização (chegou a travar o app com ~370 mil ordens reais)."""
+        con = database(':memory:')
+        base = dict(LocationId=7,ItemTypeId='T4_BAG',QualityLevel=1,
+                    EnchantmentLevel=0,AuctionType='offer',UnitPriceSilver=100,Amount=1)
+        for i in range(10):
+            save_order(con,dict(base,Id=i,UnitPriceSilver=100+i),1000-i)
+        catalog = Catalog()
+        rows = filtered_orders(con,catalog,1000,60,limit=3)
+        self.assertEqual(len(rows),3)
+        self.assertEqual([r[6] for r in rows],[100,101,102])
+        self.assertEqual(len(filtered_orders(con,catalog,1000,60)),10)
+        con.close()
+
+    def test_dashboard_warns_footer_when_window_is_truncated(self):
+        from unittest.mock import patch
+        root=tk.Tk();root.withdraw()
+        con=database(':memory:')
+        base=dict(LocationId=7,ItemTypeId='T4_BAG',QualityLevel=1,
+                  EnchantmentLevel=0,AuctionType='offer',UnitPriceSilver=100,Amount=1)
+        now=time.time()
+        for i in range(5):
+            save_order(con,dict(base,Id=i),now-i)
+        with patch('dashboard.ORDER_WINDOW_LIMIT',3):
+            app=Dashboard(root,con,Feed(),start_feed=False)
+            self.assertIn('mais de 3 ordens',app.footer.cget('text'))
+            app.close()
+
     def test_age_and_unknown_names(self):
         self.assertEqual(freshness(999,1000),'fresh')
         self.assertEqual(freshness(600,1000),'warm')

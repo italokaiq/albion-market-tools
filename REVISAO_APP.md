@@ -1,3 +1,15 @@
+# Revisão do aplicativo — 15/09/2026 (parte 8)
+
+## Correção: app travava com idade máxima alta
+
+Reportado pelo usuário: usar idade máxima grande (1440 min / 24h) travava o app. Medido com o banco real (não hipótese): com ~369 mil ordens acumuladas no banco, a janela de 24h processava **o banco inteiro a cada atualização**, levando **3,06 segundos por ciclo** — só que o ciclo roda a cada 1,5 segundo. A interface nunca alcançava, ficando permanentemente atrás e parecendo travada.
+
+- `market_view.filtered_orders()` ganhou um parâmetro opcional `limit` (LIMIT na consulta SQL, mantendo as mais recentes). `None` por padrão — comportamento idêntico para testes e para `benchmark_search.py`, que depende do total sem corte.
+- `dashboard.py` passa `limit=ORDER_WINDOW_LIMIT` (30.000) na chamada real. O rodapé avisa quando o corte é aplicado, com o mesmo padrão de transparência já usado para truncamento de exibição ("Mais itens disponíveis pelos filtros").
+- Medido antes/depois com o banco de produção real: 1440 min caiu de **3,06s para 0,16–0,22s** por ciclo — a mesma verificação que encontrou o problema confirmou a correção, não foi só teoria.
+
+Validação: 155 testes passaram, incluindo o corte em si e o aviso no rodapé do dashboard.
+
 # Revisão do aplicativo — 15/09/2026 (parte 7)
 
 ## Gráfico de histórico de preço (24h/3d/7d/30d)

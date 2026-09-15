@@ -16,6 +16,8 @@ from paths import data_path
 def silver(value):
     return f'{value:,.2f}'.replace(',', '_').replace('.', ',').replace('_', '.')
 
+ORDER_WINDOW_LIMIT = 30000
+
 
 class Dashboard(CatalogSearch):
     def __init__(self, root, con, feed, start_feed=True):
@@ -289,8 +291,10 @@ class Dashboard(CatalogSearch):
         rows = filtered_orders(self.con,self.catalog,now,int(f['minutes']),f['query'],f['market'],
                     '' if f['tier']=='Todos' else f['tier'],
                     '' if f['enchant']=='Todos' else f['enchant'],
-                    '' if f['quality']=='Todas' else f['quality'].split(' · ')[0])
+                    '' if f['quality']=='Todas' else f['quality'].split(' · ')[0],
+                    limit=ORDER_WINDOW_LIMIT)
         self.current_rows = rows
+        window_truncated = len(rows)>=ORDER_WINDOW_LIMIT
         money = lambda n: f'{n:,}'.replace(',','.')
         name = lambda code,e: f'{self.catalog.item(code)} [.{e}] • {code}'
         display = [r for r in rows if f['side']=='Todas' or r[5]==('offer' if f['side']=='Venda' else 'request')]
@@ -347,8 +351,10 @@ class Dashboard(CatalogSearch):
         warning = ' • Sem mensagens há mais de 60s' if self.feed.last and now-self.feed.last>60 else ''
         catalog_warning = ' • Catálogo indisponível: '+', '.join(self.catalog.errors) if self.catalog.errors else ''
         self.status.config(text=f'Américas · {self.feed.status}{warning} · Atualizado {last}{catalog_warning}')
+        window_note=(f' • Idade máxima ({f["minutes"]} min) tem mais de {ORDER_WINDOW_LIMIT} ordens: '
+            'mostrando só as mais recentes. Reduza a idade máxima para ver a janela completa.') if window_truncated else ''
         self.footer.config(text=f'Ordens: {min(500,len(display))} de {len(display)} • Comparações: '
-            f'{min(1000,len(groups))} de {len(groups)} • Mais itens disponíveis pelos filtros')
+            f'{min(1000,len(groups))} de {len(groups)} • Mais itens disponíveis pelos filtros{window_note}')
         self.calculators.refresh()
         self.price_api.request(self.selected_variant)
         self.timer = self.root.after(1500,self.refresh)

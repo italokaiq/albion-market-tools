@@ -81,10 +81,17 @@ def freshness(seen, now):
     return 'fresh' if age <= 300 else 'warm' if age <= 900 else 'old'
 
 
-def filtered_orders(con, catalog, now, minutes=15, query='', market='', tier='', enchant='', quality=''):
-    rows = con.execute('SELECT id,location,item,quality,enchantment,side,price,amount,seen '
-                       'FROM orders WHERE seen>=? AND amount>0 ORDER BY seen DESC',
-                       (now-minutes*60,)).fetchall()
+def filtered_orders(con, catalog, now, minutes=15, query='', market='', tier='', enchant='', quality='', limit=None):
+    """limit corta a busca nas N observações mais recentes da janela, para não reprocessar
+    o banco inteiro a cada atualização quando a idade máxima é grande. None = sem corte
+    (comportamento original, usado por testes e pelo benchmark)."""
+    sql = ('SELECT id,location,item,quality,enchantment,side,price,amount,seen '
+           'FROM orders WHERE seen>=? AND amount>0 ORDER BY seen DESC')
+    params = [now-minutes*60]
+    if limit is not None:
+        sql += ' LIMIT ?'
+        params.append(limit)
+    rows = con.execute(sql, params).fetchall()
     result = []
     words=folded(query).split()
     market_query=folded(market)

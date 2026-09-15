@@ -163,6 +163,10 @@ Operações sem confirmação aparecem como "Prevista, sem confirmação"; é po
 
 Validação: 102 testes passaram, incluindo gravação/confirmação/remoção do histórico, rejeição de registro com dados inválidos e a tela de histórico.
 
+## Correção: travamento com idade máxima alta — 15/09/2026
+
+Idade máxima em 1440 min (24h) podia travar o app depois de uso prolongado: com o banco local acumulando dezenas de milhares de ordens, cada atualização (a cada 1,5s) reprocessava a janela inteira, levando segundos por ciclo. A busca agora corta na janela às **30.000 ordens mais recentes**; o rodapé avisa quando isso acontece, e reduzir a idade máxima mostra a janela completa normalmente (janelas menores raramente chegam perto desse volume). Medido no banco real: de ~3s para ~0,2s por ciclo com 24h e ~370 mil ordens acumuladas.
+
 ## Histórico de preço médio — 15/09/2026
 
 Na Visão geral, ao lado do gráfico por cidade, uma nova aba **Histórico de preço** mostra o preço médio anunciado do item selecionado ao longo do tempo, em **24 horas, 3 dias, 7 dias ou 30 dias**, numa cidade escolhida. Vem de um endpoint diferente da mesma API das Américas (`/stats/history/`), com granularidade maior quanto menor o período (hora a hora nas 24h, diária nos 30 dias).
