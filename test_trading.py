@@ -1,5 +1,5 @@
 import unittest
-from trading import snapshot
+from trading import snapshot, item_markets
 from market_view import Catalog
 
 
@@ -35,3 +35,17 @@ class TradingTest(unittest.TestCase):
     def test_invalid_assumptions_rejected(self):
         with self.assertRaises(ValueError):
             snapshot([],Catalog(),tax=1.1)
+
+    def test_item_markets_works_for_any_code_regardless_of_equipment(self):
+        rows=[('1','7','T4_PLANKS',1,0,'offer',50,100,999),
+              ('2','1002','T4_PLANKS',1,0,'request',70,40,999),
+              ('3','1002','T4_PLANKS',2,0,'request',999,40,999),
+              ('4','7','T4_PLANKS',1,0,'offer',999,100,0)]
+        markets=item_markets(rows,'T4_PLANKS',1,0,now=1000,minutes=15)
+        self.assertEqual(markets['7']['offer'],dict(price=50,amount=100,seen=999))
+        self.assertEqual(markets['1002']['request'],dict(price=70,amount=40,seen=999))
+        self.assertNotIn('offer',markets.get('1002',{}))
+
+    def test_item_markets_empty_for_unknown_code(self):
+        rows=[self.row(1,7,'offer',100)]
+        self.assertEqual(item_markets(rows,'T4_PLANKS',1,0,now=1000,minutes=15),{})

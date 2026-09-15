@@ -111,6 +111,14 @@ Essa integração resolve a lacuna de pesquisa geral sem coleta local indicada n
 
 Validação desta integração: 39 testes passaram, incluindo abertura da pesquisa, seleção sem ordens, permanência da seleção e remoção de resultado anterior quando não há rota.
 
+## Busca e comparação de todo o mercado — 15/09/2026
+
+**Buscar no catálogo** deixou de listar só equipamentos: agora pesquisa qualquer item negociável do jogo — armas, armaduras, recursos brutos e refinados, consumíveis, monturas, mobília e sementes de fazenda — num catálogo local de 9.973 códigos (base e variantes de encantamento), extraído de todas as categorias relevantes do `ao-bin-dumps` e gerado por `python catalog_items.py`. A tela ganhou filtros dedicados de **Tier** e **Encantamento**, além da busca textual e da qualidade já existentes.
+
+Ao selecionar qualquer item — não apenas equipamentos —, a Visão geral consulta as oito cidades/mercados (fluxo AODP e API das Américas combinados) e agora mostra, além do gráfico, uma **tabela de comparação por cidade** com preço, idade e origem (fluxo/API) de cada lado. Essa comparação deixou de depender do filtro "Somente equipamentos": antes, um recurso ou consumível selecionado na busca ficava sem preço do fluxo local nessa tela, mesmo com ordens recentes no banco, porque esse filtro (pensado para a lista de rotas de flipping) também esvaziava indevidamente a consulta do item selecionado individualmente. Isso foi corrigido; o filtro agora afeta somente a lista de oportunidades, como pretendido.
+
+Validação: 81 testes passaram, incluindo a extração do catálogo por categoria (equipamentos, recursos com variantes `_LEVEL1-4` convertidas para `@1-@4`, exclusão de itens não negociáveis como diários e contratos), os filtros de tier/encantamento na busca e a regressão do preço de itens não-equipamento.
+
 ## Planejar a cadeia de craft, refino e venda
 
 Ao escolher um equipamento na tela de craft, abre-se **Planejar compra, refino, craft e venda**. Também é possível reabrir pelo botão **Comparar compra, refino e cidades**. O lote, qualidade, modos de compra/venda e perfil Premium vêm da calculadora. A API das Américas é consultada automaticamente para o produto, materiais refinados e dependências de refino até os tiers inferiores. O Mercado Negro é avaliado para venda, não como estação de produção.

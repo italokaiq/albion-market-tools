@@ -1,3 +1,12 @@
+# Revisão do aplicativo — 15/09/2026
+
+## Busca e comparação em todo o catálogo; auditoria do craft
+
+- A busca de itens (antes restrita a equipamentos) passou a cobrir todo o catálogo negociável do jogo — recursos, refinados, consumíveis, monturas, mobília e sementes —, com filtros próprios de tier e encantamento, não apenas embutidos no texto livre.
+- Corrigido: o filtro "Somente equipamentos" (destinado à lista de rotas de flipping) também esvaziava a comparação do item individualmente selecionado na busca, mesmo havendo ordens recentes no banco para esse item. A consulta de preços por cidade de um item selecionado agora é sempre real, independente desse filtro.
+- Adicionada tabela de comparação por cidade (preço, idade, origem) ao lado do gráfico já existente, para qualquer item selecionado.
+- Auditoria funcional de ponta a ponta do craft (receita → preços → cálculo → planejador de produção → perfis) com dados reais de uma receita completa (T4_MAIN_SWORD) e ordens sintéticas: nenhum bug encontrado além do já corrigido acima. A suíte subiu de 71 para 81 testes.
+
 # Revisão do aplicativo — 14/09/2026
 
 ## Corrigido nesta revisão

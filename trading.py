@@ -77,6 +77,23 @@ def snapshot(rows, catalog, minutes=15, tax=0, transport=0, equipment_only=True,
                 variants=sorted(variants.values(),key=lambda v:(v['name'],v['code'],v['quality'],v['enchantment'])),
                 routes=routes,observations=observations)
 
+def item_markets(rows, code, quality, enchant, now, minutes):
+    """Preços por cidade de um único item, sem o filtro 'Somente equipamentos' das rotas."""
+    valid_ids = dict(CITIES)
+    matches = []
+    for oid, loc, item, q, e, side, price, amount, seen in rows:
+        loc = city_id(loc)
+        if loc not in valid_ids or item != code or q != quality or e != enchant:
+            continue
+        if seen < now-minutes*60 or amount <= 0 or price <= 0:
+            continue
+        matches.append((oid, loc, item, q, e, side, price, amount, seen))
+    markets = {}
+    for (_, _, _, loc), sides in compare(matches):
+        markets[loc] = {side: dict(price=value[0], amount=value[1], seen=value[2]) for side, value in sides.items()}
+    return markets
+
+
 def selected_item_margin(markets,tax,transport,max_age,now):
     """Melhor margem unitária entre cidades, somente com observações recentes."""
     import math

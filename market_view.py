@@ -24,10 +24,20 @@ def matches_item(query,code,name):
     return all(word in item_search_text(code,name) for word in folded(query).split())
 
 
+def item_tier(code):
+    match = re.match(r'T(\d+)_', code)
+    return match[1] if match else ''
+
+
+def item_enchant(code):
+    return code.split('@', 1)[1] if '@' in code else '0'
+
+
 class Catalog:
     def __init__(self):
         base = Path(__file__).parent
         self.names, self.markets = {}, {}
+        self.market_codes = []
         self.errors = []
         for filename in ('items', 'world'):
             try:
@@ -41,6 +51,13 @@ class Catalog:
                         self.markets[str(int(key)) if key.isdigit() else key] = row['UniqueName']
             except (OSError, ValueError, KeyError, TypeError):
                 self.errors.append(filename)
+        try:
+            self.market_codes = json.loads((base / 'market_items.json').read_bytes())
+            if not isinstance(self.market_codes, list) or not self.market_codes:
+                raise ValueError('Catálogo de itens negociáveis vazio ou inválido.')
+        except (OSError, ValueError, KeyError, TypeError):
+            self.market_codes = []
+            self.errors.append('market_items')
 
     def item(self, code):
         return self.names.get(code, self.names.get(code.split('@')[0], code))
@@ -81,8 +98,7 @@ def filtered_orders(con, catalog, now, minutes=15, query='', market='', tier='',
         if quality and str(q) != quality:
             continue
         if item not in item_matches:
-            match = re.match(r'T(\d+)_', item) if tier else None
-            item_matches[item]=(not tier or bool(match and match[1]==tier)) and (
+            item_matches[item]=(not tier or item_tier(item)==tier) and (
                 not words or all(word in item_search_text(item,catalog.item(item)) for word in words))
         if not item_matches[item]:continue
         if market_query:

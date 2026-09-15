@@ -81,7 +81,7 @@ class ComparisonTest(unittest.TestCase):
         self.assertIsNone(app.selected_variant)
         self.assertEqual(len(app.chart.find_all()),1)
         self.assertEqual(app.chart.itemcget(app.chart.find_all()[0],'text'),
-                         'Selecione um equipamento para comparar.')
+                         'Selecione um item para comparar.')
         from types import SimpleNamespace
         app.top_routes.selection_set(app.top_routes.get_children()[0])
         app.select_route(SimpleNamespace(widget=app.top_routes))

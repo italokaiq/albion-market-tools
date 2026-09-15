@@ -10,10 +10,10 @@ BASE=Path(__file__).resolve().parent
 
 def diagnostic():
     files={}
-    for name in ('items.json','world.json','recipes.json','recipes_source.json'):
+    for name in ('items.json','world.json','recipes.json','recipes_source.json','market_items.json'):
         try:
             data=json.loads((BASE/name).read_text(encoding='utf8'))
-            expected=list if name in ('items.json','world.json') else dict
+            expected=list if name in ('items.json','world.json','market_items.json') else dict
             files[name]='OK' if isinstance(data,expected) and bool(data) else 'Formato inválido'
         except (OSError,ValueError):files[name]='Ausente ou inválido'
     return {'python':sys.version.split()[0],'sqlite':sqlite3.sqlite_version,'catalogos':files,

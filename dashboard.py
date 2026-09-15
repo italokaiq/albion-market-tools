@@ -30,6 +30,7 @@ class Dashboard(CatalogSearch):
         self.exporter = None
         self.export_enabled = start_feed
         self.current_snapshot = None
+        self.current_rows = []
         from market_service import MarketService
         self.market_service=MarketService()
         self.price_api=PriceAPI(enabled=start_feed,service=self.market_service)
@@ -144,8 +145,8 @@ class Dashboard(CatalogSearch):
         self.top_routes = self.make_table(left,None,[('Equipamento',230),('Comprar em',110),('Vender em',120),('Margem/un.',100),('Qtd.',55)])
         self.api_status=ttk.Label(right,text='',wraplength=480,foreground='#A3B5CB')
         self.api_status.pack(anchor='w',padx=12,pady=5)
-        self.chart = tk.Canvas(right,background='#16263A',highlightthickness=0,width=480,height=310)
-        self.chart.pack(fill='both',expand=True,padx=(12,0))
+        self.chart = tk.Canvas(right,background='#16263A',highlightthickness=0,width=480,height=260)
+        self.chart.pack(fill='x',padx=(12,0))
         self.selected_margin=ttk.Label(right,text='',wraplength=460,font=('Segoe UI',10,'bold'))
         self.selected_margin.pack(fill='x',padx=12,pady=8)
         self.chart.bind('<Configure>',lambda event:self.draw_chart())
@@ -153,6 +154,9 @@ class Dashboard(CatalogSearch):
         self.catalog_selection = None
         ttk.Button(list_controls,text='Buscar no catálogo',command=self.choose_market_item).pack(side='left',padx=8)
         ttk.Button(right,text='Simular rota selecionada',command=lambda:self.open_route_summary()).pack(anchor='w',padx=12)
+        ttk.Label(right,text='Comparação por cidade',foreground='#A3B5CB').pack(anchor='w',padx=12,pady=(10,2))
+        self.city_compare = self.make_table(right,None,[('Cidade',105),('Comprar por',95),('Idade/origem compra',150),
+                                                          ('Vender por',95),('Idade/origem venda',150)])
         self.top_routes.bind('<<TreeviewSelect>>',self.select_route)
         self.matrix = self.make_table(notebook,'Preços por cidade',
             [('Equipamento',310),('Qualidade',110),('Preço',120)]+[(c[1],115) for c in CITIES])
@@ -255,6 +259,7 @@ class Dashboard(CatalogSearch):
                     '' if f['tier']=='Todos' else f['tier'],
                     '' if f['enchant']=='Todos' else f['enchant'],
                     '' if f['quality']=='Todas' else f['quality'].split(' · ')[0])
+        self.current_rows = rows
         money = lambda n: f'{n:,}'.replace(',','.')
         name = lambda code,e: f'{self.catalog.item(code)} [.{e}] • {code}'
         display = [r for r in rows if f['side']=='Todas' or r[5]==('offer' if f['side']=='Venda' else 'request')]
@@ -401,14 +406,17 @@ class Dashboard(CatalogSearch):
         variant=next((v for v in data['variants'] if (v['code'],v['quality'],v['enchantment'])==self.selected_variant),None) if data else None
         if variant is None and self.selected_variant is not None and self.selected_variant==self.catalog_selection:
             code,quality,enchant=self.selected_variant
+            from trading import item_markets
+            markets=item_markets(self.current_rows,code,quality,enchant,time.time(),int(self.filters['minutes'].get()))
             variant=dict(code=code,quality=quality,enchantment=enchant,name=self.catalog.item(code),
-                         quality_name=QUALITY.get(quality,str(quality)),markets={})
+                         quality_name=QUALITY.get(quality,str(quality)),markets=markets)
         api_prices,api_message=self.price_api.read(self.selected_variant)
         self.api_status.configure(text=api_message)
         if variant is None:
             self.selected_margin.configure(text='')
+            sync_table(self.city_compare,[])
             canvas.create_text(20,30,anchor='nw',width=w-40,fill='#CFDCEC',font=('Segoe UI',12),
-                text='Selecione um equipamento para comparar.')
+                text='Selecione um item para comparar.')
             return
         canvas.create_text(15,10,anchor='nw',width=w-30,fill='#FFFFFF',font=('Segoe UI',11,'bold'),
             text=f"{variant['name']} {variant['code'].split('_')[0]}.{variant['enchantment']} · {variant['quality_name']}")
@@ -426,6 +434,20 @@ class Dashboard(CatalogSearch):
             else:self.selected_margin.configure(text='Margem indisponível: faltam oferta de venda e pedido de compra recentes em cidades diferentes.',foreground='#A3B5CB')
         except ValueError:
             self.selected_margin.configure(text='Margem indisponível: confira imposto e transporte.',foreground='#F0AAAA')
+        now=time.time();max_age=int(self.filters['minutes'].get())*60
+        def cell(price):
+            if not price:return '—','sem dado'
+            old=now-price['seen']>max_age
+            return (('*' if old else '')+silver(price['price']),
+                    f"{age_text(price['seen'],now)} · {price.get('source','Fluxo')}"+(' (vencido)' if old else ''))
+        compare_rows=[]
+        for loc,city in CITIES:
+            sides=markets.get(loc,{})
+            buy_price,buy_age=cell(sides.get('offer'))
+            sell_price,sell_age=cell(sides.get('request'))
+            has_fresh=any(p and now-p['seen']<=max_age for p in (sides.get('offer'),sides.get('request')))
+            compare_rows.append((loc,(city,buy_price,buy_age,sell_price,sell_age),'fresh' if has_fresh else 'old'))
+        sync_table(self.city_compare,compare_rows)
         canvas.create_text(15,46,anchor='nw',fill='#6EADD4',font=('Segoe UI',9),text='Azul: comprar')
         canvas.create_text(135,46,anchor='nw',fill='#74D3AB',font=('Segoe UI',9),text='Verde: vender')
         canvas.create_text(15,62,anchor='nw',fill='#A5A1A0',font=('Segoe UI',9),width=w-30,
