@@ -1,3 +1,16 @@
+# Revisão do aplicativo — 15/09/2026 (parte 7)
+
+## Gráfico de histórico de preço (24h/3d/7d/30d)
+
+Sugestão do usuário, comparando com o gráfico de médias que o próprio jogo mostra. Verificado antes de implementar: a API das Américas (mesmo host já usado, `west.albion-online-data.com`) tem um endpoint `/stats/history/` separado do de preços atuais, com `avg_price` e `item_count` por intervalo (`time-scale` aceita 1/6/24 horas, confirmado na documentação pública).
+
+- `price_history.py`: `fetch_history()`/`parse_history()` (mesma robustez a linhas malformadas do resto do app) e uma classe `PriceHistory` com o mesmo padrão de `PriceAPI` — throttle de 60s por chave, cache, thread em segundo plano, mensagens de status.
+- Nova aba "Histórico de preço" na Visão geral, ao lado da comparação por cidade já existente: seletor de período (24h/3d/7d/30d) e cidade, desenhado como gráfico de linha no mesmo estilo visual do resto do app.
+- **Dois bugs reais encontrados e corrigidos durante o desenvolvimento, ambos por testar contra a API de verdade em vez de só mockar**: (1) a integração inicial passava o ID da cidade (ex. "3008") para a API, que espera o nome ("Martlock") — a consulta nunca vinha vazia por acaso, vinha vazia porque o parâmetro estava errado; (2) o Mercado Negro precisa do nome em inglês "Black Market" para essa consulta (confirmado comparando os locais retornados pela API com e sem filtro) — a tradução para português usada na interface (`trading.CITIES`) não funciona como parâmetro. Corrigido com `trading.api_city_name()`, testado com uma consulta real trazendo dados de Martlock e do Mercado Negro.
+- Rotulado como "preço médio anunciado observado" — a documentação pública não garante se é venda confirmada ou média de anúncios, então o app trata com a mesma cautela de sempre.
+
+Validação: 153 testes passaram.
+
 # Revisão do aplicativo — 15/09/2026 (parte 6)
 
 ## Atualizador de catálogo

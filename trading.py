@@ -20,6 +20,11 @@ def equipment(code):
     return any('_'+part in code for part in ('MAIN_','2H_','OFF_','HEAD_','ARMOR_','SHOES_','BAG','CAPE'))
 
 
+def api_city_name(display_name):
+    """A API usa 'Black Market' (inglês); o app exibe 'Mercado Negro'. Demais nomes coincidem."""
+    return 'Black Market' if display_name == 'Mercado Negro' else display_name
+
+
 def snapshot(rows, catalog, minutes=15, tax=0, transport=0, equipment_only=True, now=None, api=None):
     now = time.time() if now is None else now
     if not 0 <= tax <= 1 or transport < 0:

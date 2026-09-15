@@ -6,8 +6,9 @@ import os
 import math
 from tkinter import ttk
 from market_view import Catalog, QUALITY, age_text, freshness, filtered_orders, compare, sync_table
-from trading import snapshot, CITIES, selected_item_margin
+from trading import snapshot, CITIES, selected_item_margin, api_city_name
 from market_api import PriceAPI, combine_prices
+from price_history import PriceHistory, PERIODS
 from catalog_search import CatalogSearch
 from paths import data_path
 
@@ -34,6 +35,7 @@ class Dashboard(CatalogSearch):
         from market_service import MarketService
         self.market_service=MarketService()
         self.price_api=PriceAPI(enabled=start_feed,service=self.market_service)
+        self.price_history=PriceHistory(enabled=start_feed)
         root.title('Albion • Mercado Américas')
         root.geometry('1440x900')
         root.minsize(1100, 740)
@@ -145,18 +147,41 @@ class Dashboard(CatalogSearch):
         self.top_routes = self.make_table(left,None,[('Equipamento',230),('Comprar em',110),('Vender em',120),('Margem/un.',100),('Qtd.',55)])
         self.api_status=ttk.Label(right,text='',wraplength=480,foreground='#A3B5CB')
         self.api_status.pack(anchor='w',padx=12,pady=5)
-        self.chart = tk.Canvas(right,background='#16263A',highlightthickness=0,width=480,height=260)
-        self.chart.pack(fill='x',padx=(12,0))
-        self.selected_margin=ttk.Label(right,text='',wraplength=460,font=('Segoe UI',10,'bold'))
-        self.selected_margin.pack(fill='x',padx=12,pady=8)
+        right_tabs=ttk.Notebook(right)
+        right_tabs.pack(fill='both',expand=True,padx=(12,0))
+        compare_tab=ttk.Frame(right_tabs,padding=(0,6))
+        right_tabs.add(compare_tab,text='Comparação por cidade')
+        self.chart = tk.Canvas(compare_tab,background='#16263A',highlightthickness=0,width=480,height=260)
+        self.chart.pack(fill='x')
+        self.selected_margin=ttk.Label(compare_tab,text='',wraplength=460,font=('Segoe UI',10,'bold'))
+        self.selected_margin.pack(fill='x',pady=8)
         self.chart.bind('<Configure>',lambda event:self.draw_chart())
         self.selected_variant = None
         self.catalog_selection = None
         ttk.Button(list_controls,text='Buscar no catálogo',command=self.choose_market_item).pack(side='left',padx=8)
-        ttk.Button(right,text='Simular rota selecionada',command=lambda:self.open_route_summary()).pack(anchor='w',padx=12)
-        ttk.Label(right,text='Comparação por cidade',foreground='#A3B5CB').pack(anchor='w',padx=12,pady=(10,2))
-        self.city_compare = self.make_table(right,None,[('Cidade',105),('Comprar por',95),('Idade/origem compra',150),
+        ttk.Button(compare_tab,text='Simular rota selecionada',command=lambda:self.open_route_summary()).pack(anchor='w')
+        ttk.Label(compare_tab,text='Comparação por cidade',foreground='#A3B5CB').pack(anchor='w',pady=(10,2))
+        self.city_compare = self.make_table(compare_tab,None,[('Cidade',105),('Comprar por',95),('Idade/origem compra',150),
                                                           ('Vender por',95),('Idade/origem venda',150)])
+        history_tab=ttk.Frame(right_tabs,padding=(0,6))
+        right_tabs.add(history_tab,text='Histórico de preço')
+        history_controls=ttk.Frame(history_tab)
+        history_controls.pack(fill='x')
+        ttk.Label(history_controls,text='Período').pack(side='left',padx=(0,6))
+        self.history_period=tk.StringVar(value='7d')
+        for code,label in [('24h','24h'),('3d','3 dias'),('7d','7 dias'),('30d','30 dias')]:
+            ttk.Radiobutton(history_controls,text=label,value=code,variable=self.history_period,
+                             command=self.draw_history_chart).pack(side='left',padx=3)
+        ttk.Label(history_controls,text='Cidade').pack(side='left',padx=(12,6))
+        self.history_city=tk.StringVar(value=CITIES[0][1])
+        ttk.Combobox(history_controls,textvariable=self.history_city,values=[c[1] for c in CITIES],
+                     state='readonly',width=13).pack(side='left')
+        self.history_city.trace_add('write',lambda *a:self.draw_history_chart())
+        self.history_status=ttk.Label(history_tab,text='',foreground='#A3B5CB',wraplength=460)
+        self.history_status.pack(anchor='w',pady=4)
+        self.history_chart=tk.Canvas(history_tab,background='#16263A',highlightthickness=0,width=480,height=280)
+        self.history_chart.pack(fill='both',expand=True)
+        self.history_chart.bind('<Configure>',lambda event:self.draw_history_chart())
         self.top_routes.bind('<<TreeviewSelect>>',self.select_route)
         self.matrix = self.make_table(notebook,'Preços por cidade',
             [('Equipamento',310),('Qualidade',110),('Preço',120)]+[(c[1],115) for c in CITIES])
@@ -484,6 +509,55 @@ class Dashboard(CatalogSearch):
                         text=f"{silver(price['price'])} · {age_text(price['seen'],time.time())}{'*' if old else ''} {price.get('source','Fluxo')}")
                 else:
                     canvas.create_text(right+7,yy+4,anchor='w',fill='#8295AD',font=('Segoe UI',8),text='sem dado')
+        self.request_history()
+        self.draw_history_chart()
+
+    def request_history(self):
+        if not self.selected_variant:return
+        code,quality,_=self.selected_variant
+        city=api_city_name(self.history_city.get())
+        if city:self.price_history.request(code,quality,city,self.history_period.get())
+
+    def draw_history_chart(self):
+        canvas=self.history_chart
+        canvas.delete('all')
+        w=max(canvas.winfo_width(),400);h=max(canvas.winfo_height(),240)
+        if not self.selected_variant:
+            self.history_status.configure(text='')
+            canvas.create_text(20,20,anchor='nw',width=w-40,fill='#CFDCEC',font=('Segoe UI',12),
+                text='Selecione um item para ver o histórico.')
+            return
+        code,quality,enchant=self.selected_variant
+        city_name=self.history_city.get()
+        period=self.history_period.get()
+        points,message=self.price_history.read(code,quality,api_city_name(city_name),period)
+        self.history_status.configure(text=message)
+        title=f"{self.catalog.item(code)} {code.split('_')[0]}.{enchant} · {city_name} · {PERIODS[period]['label']} · preço médio anunciado observado"
+        canvas.create_text(15,8,anchor='nw',width=w-30,fill='#FFFFFF',font=('Segoe UI',10,'bold'),text=title)
+        if not points:
+            canvas.create_text(15,40,anchor='nw',width=w-30,fill='#8295AD',font=('Segoe UI',11),
+                text='Sem histórico de preço anunciado para este item/cidade/período.')
+            return
+        prices=[p['price'] for p in points]
+        lo,hi=min(prices),max(prices)
+        if lo==hi:
+            lo,hi=(lo*0.9,hi*1.1) if hi else (0,1)
+        left,right,top,bottom=60,w-15,36,h-30
+        def x_of(i):return left+(right-left)*i/max(1,len(points)-1)
+        def y_of(price):return bottom-(bottom-top)*(price-lo)/(hi-lo)
+        canvas.create_text(left-6,top,anchor='ne',fill='#8295AD',font=('Segoe UI',8),text=silver(hi))
+        canvas.create_text(left-6,bottom,anchor='se',fill='#8295AD',font=('Segoe UI',8),text=silver(lo))
+        if len(points)>1:
+            coords=[]
+            for i,p in enumerate(points):coords.extend([x_of(i),y_of(p['price'])])
+            canvas.create_line(*coords,fill='#74D3AB',width=2)
+        for i,p in enumerate(points):
+            canvas.create_oval(x_of(i)-2,y_of(p['price'])-2,x_of(i)+2,y_of(p['price'])+2,fill='#74D3AB',outline='')
+        date_format='%d/%m %Hh' if period in ('24h','3d') else '%d/%m'
+        shown=sorted(set([0,len(points)//2,len(points)-1]))
+        for i in shown:
+            label=time.strftime(date_format,time.localtime(points[i]['seen']))
+            canvas.create_text(x_of(i),bottom+6,anchor='n',fill='#8295AD',font=('Segoe UI',8),text=label)
 
     def close(self):
         if self.calculators.production_planner is not None:self.calculators.production_planner.close()

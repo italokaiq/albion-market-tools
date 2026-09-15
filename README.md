@@ -163,6 +163,14 @@ Operações sem confirmação aparecem como "Prevista, sem confirmação"; é po
 
 Validação: 102 testes passaram, incluindo gravação/confirmação/remoção do histórico, rejeição de registro com dados inválidos e a tela de histórico.
 
+## Histórico de preço médio — 15/09/2026
+
+Na Visão geral, ao lado do gráfico por cidade, uma nova aba **Histórico de preço** mostra o preço médio anunciado do item selecionado ao longo do tempo, em **24 horas, 3 dias, 7 dias ou 30 dias**, numa cidade escolhida. Vem de um endpoint diferente da mesma API das Américas (`/stats/history/`), com granularidade maior quanto menor o período (hora a hora nas 24h, diária nos 30 dias).
+
+Rotulado como **"preço médio anunciado observado"**, igual ao resto do app: a documentação pública da API não deixa claro se esse valor reflete vendas confirmadas ou apenas o preço médio dos anúncios daquele intervalo, então tratamos como anúncio — a mesma cautela já aplicada a todo o restante dos preços do app, nunca presumindo venda concluída sem evidência. Mercado Negro é traduzido corretamente para o nome que a API espera (`Black Market`) só para essa consulta; a interface continua mostrando "Mercado Negro".
+
+Validação: 153 testes passaram, incluindo o parsing de respostas malformadas, throttling de 60s por (item, cidade, período), e a consulta real contra a API confirmando as quatro janelas de tempo e a tradução correta do nome do Mercado Negro (achado em teste manual: a API usa "Black Market", não a tradução em português).
+
 ## Atualizador de catálogo — 15/09/2026
 
 `atualizar_catalogo.cmd` (ou `python catalog_updater.py`) verifica os três catálogos-fonte no repositório público [ao-bin-dumps](https://github.com/ao-data/ao-bin-dumps) — `items.json`, `world.json` e `recipes_source.json` — comparando o tamanho remoto com o local (checagem rápida, sem baixar tudo). Se algo mudou, baixa, valida o formato (tipo esperado, não vazio, chave `items` presente em `recipes_source.json`) e só então substitui o arquivo local, com a versão anterior preservada em `.bak`. Um download que falhe na validação nunca sobrescreve o catálogo atual. Depois de atualizar `recipes_source.json`, `recipes.json` e `market_items.json` são regerados automaticamente a partir dele.

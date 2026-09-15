@@ -1,5 +1,5 @@
 import unittest
-from trading import snapshot, item_markets
+from trading import snapshot, item_markets, api_city_name
 from market_view import Catalog
 
 
@@ -49,3 +49,8 @@ class TradingTest(unittest.TestCase):
     def test_item_markets_empty_for_unknown_code(self):
         rows=[self.row(1,7,'offer',100)]
         self.assertEqual(item_markets(rows,'T4_PLANKS',1,0,now=1000,minutes=15),{})
+
+    def test_api_city_name_translates_only_black_market(self):
+        self.assertEqual(api_city_name('Mercado Negro'),'Black Market')
+        self.assertEqual(api_city_name('Martlock'),'Martlock')
+        self.assertEqual(api_city_name('Caerleon'),'Caerleon')
