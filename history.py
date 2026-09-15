@@ -11,11 +11,12 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from persistence import write_settings
+from paths import data_path
 
 
 class History:
     def __init__(self, path=None):
-        self.path = Path(path) if path else Path(__file__).with_name('historico.json')
+        self.path = Path(path) if path else data_path('historico.json')
 
     def read(self):
         if not self.path.exists():

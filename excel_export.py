@@ -4,9 +4,10 @@ import subprocess
 import threading
 import time
 from pathlib import Path
+from paths import resource_path, data_path
 
-BASE = Path(__file__).parent
-OUTPUT = BASE / 'outputs' / 'albion-americas'
+BASE = resource_path('.')
+OUTPUT = data_path('outputs') / 'albion-americas'
 WORKBOOK = OUTPUT / 'Mercado_Americas.xlsx'
 NODE = Path.home()/'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe'
 

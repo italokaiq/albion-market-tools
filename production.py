@@ -1,15 +1,15 @@
 """Cadeia de produção: receitas reais e preços observados; custos ausentes bloqueiam opções."""
 import json
-from pathlib import Path
 from functools import lru_cache
 from recipes import many
 from trading import CITIES
 from economics import number, SALES_TAX, SETUP_FEE
+from paths import resource_path
 
 PRODUCTION_CITIES=[(c,n) for c,n in CITIES if c!='3003']
 
 def refining_recipes():
-    source=json.loads(Path(__file__).with_name('recipes_source.json').read_text(encoding='utf8'))
+    source=json.loads(resource_path('recipes_source.json').read_text(encoding='utf8'))
     result={}
     for item in many(source['items'].get('simpleitem')):
         if item.get('@shopsubcategory1')!='refinedresources':continue

@@ -34,9 +34,10 @@ def extract(source):
 
 class RecipeCatalog:
     def __init__(self,catalog):
+        from paths import resource_path
         self.catalog=catalog
         self.error=''
-        try:self.recipes=json.loads(Path(__file__).with_name('recipes.json').read_text(encoding='utf-8'))
+        try:self.recipes=json.loads(resource_path('recipes.json').read_text(encoding='utf-8'))
         except (OSError,ValueError):
             self.recipes={};self.error='Catálogo de receitas indisponível. Você pode preencher a receita manualmente.'
         self.codes=sorted(self.recipes,key=lambda c:(catalog.item(c),c))

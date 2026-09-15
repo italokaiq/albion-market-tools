@@ -1,3 +1,18 @@
+# Revisão do aplicativo — 15/09/2026 (parte 4)
+
+## Executável autônomo (.exe real)
+
+Primeiro item da lista de maturidade de produto resolvido: "instalador independente: executar sem instalar Python manualmente".
+
+- `paths.py`: módulo novo com `resource_path()` (catálogos embutidos, somente leitura) e `data_path()` (dados do usuário, sempre ao lado do `.exe` real — nunca dentro dele). Necessário porque um `.exe` de arquivo único do PyInstaller extrai os recursos para uma pasta temporária a cada execução; sem essa separação, todo dado gravado pelo usuário (banco, preferências, histórico, perfis) desapareceria a cada reinício.
+- Todo `Path(__file__)...` usado para localizar arquivos de dado ou catálogo foi trocado por `resource_path`/`data_path`, nos módulos: `monitor.py` (banco), `dashboard.py` (preferências), `calculators.py` (receita atual), `production_profiles.py` (perfis), `history.py` (histórico), `market_view.py`/`recipes.py`/`production.py` (catálogos), `launcher.py` (diagnóstico e pasta de logs), `excel_export.py` (pasta de saída).
+- `build_exe.cmd`: gera `dist\AlbionMercadoAmericas.exe` com PyInstaller (`--onefile`), embutindo os catálogos.
+- Testado com o executável real, não só em teoria: build gerado, copiado para uma pasta vazia isolada do projeto, e executado de lá. `--diagnostico` confirmou os cinco catálogos embutidos lidos corretamente; rodando a janela principal, `mercado.sqlite3` e `logs\` apareceram corretamente ao lado do `.exe`, não na pasta temporária de extração.
+
+Não incluído: assinatura de código, instalador com desinstalador (é um arquivo único, apagar remove o programa mas não os dados gravados ao lado dele), atualização automática do próprio app. `build/`, `dist/` e `*.spec` ficaram fora do controle de versão (artefatos de build, reproduzíveis via `build_exe.cmd`).
+
+Validação: 106 testes passaram, incluindo a resolução de caminhos com e sem empacotamento (`test_paths.py`) e o ajuste do diagnóstico para não depender mais de um caminho fixo de módulo.
+
 # Revisão do aplicativo — 15/09/2026 (parte 3)
 
 ## Histórico de operações: previsto x realizado

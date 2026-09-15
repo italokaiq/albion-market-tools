@@ -4,10 +4,10 @@ import socket
 import sqlite3
 import threading
 import time
-from pathlib import Path
 import tkinter as tk
+from paths import data_path
 
-DB = Path(__file__).with_name('mercado.sqlite3')
+DB = data_path('mercado.sqlite3')
 HOST = 'nats.albion-online-data.com'
 TOPIC = 'marketorders.deduped'
 

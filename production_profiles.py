@@ -4,10 +4,11 @@ from pathlib import Path
 from datetime import datetime,timezone
 from economics import number
 from persistence import write_settings
+from paths import data_path
 
 class ProductionProfiles:
     def __init__(self,path=None):
-        self.path=Path(path) if path else Path(__file__).with_name('perfis_producao.json')
+        self.path=Path(path) if path else data_path('perfis_producao.json')
 
     def read(self):
         if not self.path.exists():return {'version':1,'profiles':{}}

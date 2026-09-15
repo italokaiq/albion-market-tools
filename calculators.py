@@ -1,6 +1,5 @@
 import json
 import time
-from pathlib import Path
 import tkinter as tk
 from tkinter import ttk
 from economics import flipping, crafting
@@ -8,6 +7,7 @@ from trading import CITIES, selected_item_margin
 from ui_design import disclosure,result_table,fill_results
 from craft_prices import CraftPrices
 from history import History
+from paths import data_path
 
 
 def money(v):
@@ -17,7 +17,7 @@ def money(v):
 class Calculators(CraftPrices):
     def __init__(self,app):
         self.app=app
-        self.saved=Path(__file__).with_name('receita_craft.json')
+        self.saved=data_path('receita_craft.json')
         self.history=History()
         self.flip_fields={}
         self.craft_fields={}

@@ -1,6 +1,11 @@
 # Monitor Albion — Américas
 
-Abra `iniciar.cmd` para iniciar a janela. Requer Python 3.12 com Tkinter (já disponível neste computador). Não precisa informar senha do jogo nem manter o Albion aberto.
+Duas formas de rodar:
+
+- **Executável autônomo**: gere `dist\AlbionMercadoAmericas.exe` com `build_exe.cmd` (uma vez) e depois abra esse arquivo diretamente. Não precisa instalar Python. Copie o `.exe` para a pasta onde ele vai ficar — ele cria `mercado.sqlite3`, `preferencias.json`, `historico.json` e `logs\` ao lado de si mesmo.
+- **A partir do código-fonte**: abra `iniciar.cmd`. Requer Python 3.12 com Tkinter (já disponível neste computador).
+
+Não precisa informar senha do jogo nem manter o Albion aberto, em nenhum dos dois casos.
 
 ## Dashboard sem Office
 
@@ -164,4 +169,10 @@ O planejador oferece **Salvar perfil** e **Carregar perfil**, com nome escolhido
 
 Preferências, receita atual e perfis são gravados por substituição atômica; a versão anterior é copiada para o respectivo `.json.bak`. Este é um backup local de uma versão, não proteção contra perda do computador e não inclui o banco de mercado. Para restaurar, feche o app, preserve o arquivo atual com outro nome e copie o `.bak` para o nome original `.json`.
 
-Use `iniciar.cmd` para iniciar com registro de erros em `logs/erros.log`. Os logs têm rotação limitada e não são enviados a serviços externos. `diagnosticar.cmd` informa versão de Python/SQLite e integridade básica dos catálogos, sem listar preços. O diagnóstico não testa rede nem valida cada receita semanticamente. A inicialização ainda requer Python 3.12+ com Tkinter; não foi criado instalador independente ou atualização automática.
+Use `iniciar.cmd` (ou o `.exe`) para iniciar com registro de erros em `logs/erros.log`, criado ao lado do programa. Os logs têm rotação limitada e não são enviados a serviços externos. `diagnosticar.cmd` informa versão de Python/SQLite e integridade básica dos catálogos, sem listar preços; o mesmo diagnóstico está disponível no `.exe` via `AlbionMercadoAmericas.exe --diagnostico`. O diagnóstico não testa rede nem valida cada receita semanticamente. Rodar a partir do código-fonte ainda requer Python 3.12+ com Tkinter; o `.exe` não requer isso, mas ainda não há atualização automática do programa nem instalador com desinstalador — é um arquivo único para copiar e apagar.
+
+## Executável autônomo — 15/09/2026
+
+`build_exe.cmd` empacota o app com PyInstaller num único `dist\AlbionMercadoAmericas.exe`, sem exigir Python na máquina de quem vai usar. Os catálogos (`items.json`, `world.json`, `recipes.json`, `recipes_source.json`, `market_items.json`) vão embutidos no executável, somente leitura. Dados que precisam persistir entre execuções — banco de mercado, preferências, receita atual, perfis, histórico e logs — são sempre gravados ao lado do `.exe` (nunca dentro dele ou numa pasta temporária), através de `paths.py`, um módulo central que resolve os caminhos corretamente tanto rodando como script quanto empacotado. Testado de verdade: gerado o executável, executado a partir de uma pasta isolada sem nenhum arquivo do projeto, confirmando que os catálogos embutidos são lidos corretamente e que `mercado.sqlite3`/`logs/` são criados ao lado do `.exe`, não na pasta de extração temporária do PyInstaller.
+
+Validação: 106 testes passaram, incluindo a resolução de caminhos com e sem empacotamento.

@@ -2,17 +2,15 @@
 import json
 import logging
 from logging.handlers import RotatingFileHandler
-from pathlib import Path
 import sqlite3
 import sys
-
-BASE=Path(__file__).resolve().parent
+from paths import resource_path, data_path
 
 def diagnostic():
     files={}
     for name in ('items.json','world.json','recipes.json','recipes_source.json','market_items.json'):
         try:
-            data=json.loads((BASE/name).read_text(encoding='utf8'))
+            data=json.loads(resource_path(name).read_text(encoding='utf8'))
             expected=list if name in ('items.json','world.json','market_items.json') else dict
             files[name]='OK' if isinstance(data,expected) and bool(data) else 'Formato inválido'
         except (OSError,ValueError):files[name]='Ausente ou inválido'
@@ -24,7 +22,7 @@ def main():
         report=diagnostic()
         print(json.dumps(report,ensure_ascii=False,indent=2))
         return 0 if all(v=='OK' for v in report['catalogos'].values()) and sys.version_info>=(3,12) else 1
-    folder=BASE/'logs';folder.mkdir(exist_ok=True)
+    folder=data_path('logs');folder.mkdir(exist_ok=True)
     logger=logging.getLogger('albion');logger.setLevel(logging.ERROR)
     handler=RotatingFileHandler(folder/'erros.log',maxBytes=1_000_000,backupCount=2,encoding='utf8')
     logger.addHandler(handler)

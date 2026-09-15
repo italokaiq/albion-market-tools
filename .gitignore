@@ -8,3 +8,6 @@ perfis_producao.json
 historico.json
 *.json.bak
 logs/
+build/
+dist/
+*.spec

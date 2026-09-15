@@ -29,9 +29,9 @@ class ProfilesTest(unittest.TestCase):
         with self.assertRaises(ValueError):self.store.load('Um',('A',))
 
     def test_diagnostic_rejects_wrong_catalog_shape(self):
-        for name in ('items.json','world.json','recipes.json','recipes_source.json'):
+        for name in ('items.json','world.json','recipes.json','recipes_source.json','market_items.json'):
             (self.path.parent/name).write_text('{}')
-        with patch('launcher.BASE',self.path.parent):
+        with patch('launcher.resource_path',lambda name:self.path.parent/name):
             report=diagnostic()
         self.assertEqual(report['catalogos']['items.json'],'Formato inválido')
     def test_backup_preserves_previous_profile(self):

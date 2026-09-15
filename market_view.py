@@ -2,7 +2,6 @@
 import json
 import re
 import unicodedata
-from pathlib import Path
 from functools import lru_cache
 
 QUALITY = {1: 'Normal', 2: 'Boa', 3: 'Excepcional', 4: 'Excelente', 5: 'Obra-prima'}
@@ -35,13 +34,13 @@ def item_enchant(code):
 
 class Catalog:
     def __init__(self):
-        base = Path(__file__).parent
+        from paths import resource_path
         self.names, self.markets = {}, {}
         self.market_codes = []
         self.errors = []
         for filename in ('items', 'world'):
             try:
-                rows = json.loads((base / (filename + '.json')).read_bytes())
+                rows = json.loads(resource_path(filename + '.json').read_bytes())
                 for row in rows:
                     if filename == 'items':
                         names = row.get('LocalizedNames') or {}
@@ -52,7 +51,7 @@ class Catalog:
             except (OSError, ValueError, KeyError, TypeError):
                 self.errors.append(filename)
         try:
-            self.market_codes = json.loads((base / 'market_items.json').read_bytes())
+            self.market_codes = json.loads(resource_path('market_items.json').read_bytes())
             if not isinstance(self.market_codes, list) or not self.market_codes:
                 raise ValueError('Catálogo de itens negociáveis vazio ou inválido.')
         except (OSError, ValueError, KeyError, TypeError):

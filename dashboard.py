@@ -4,12 +4,12 @@ import time
 import tkinter as tk
 import os
 import math
-from pathlib import Path
 from tkinter import ttk
 from market_view import Catalog, QUALITY, age_text, freshness, filtered_orders, compare, sync_table
 from trading import snapshot, CITIES, selected_item_margin
 from market_api import PriceAPI, combine_prices
 from catalog_search import CatalogSearch
+from paths import data_path
 
 
 def silver(value):
@@ -20,7 +20,7 @@ class Dashboard(CatalogSearch):
     def __init__(self, root, con, feed, start_feed=True):
         self.root, self.con, self.feed = root, con, feed
         self.catalog = Catalog()
-        self.settings_path = Path(__file__).with_name('preferencias.json')
+        self.settings_path = data_path('preferencias.json')
         try:
             self.saved_settings = json.loads(self.settings_path.read_text(encoding='utf-8'))
             if not isinstance(self.saved_settings,dict):
