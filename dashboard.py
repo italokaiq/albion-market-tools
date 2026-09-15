@@ -181,13 +181,17 @@ class Dashboard(CatalogSearch):
             ttk.Label(freshness_controls,text='Idade máxima dos preços (min)').pack(side='left',padx=(0,8))
             ttk.Combobox(freshness_controls,textvariable=self.filters['minutes'],
                          values=('5','15','30','60','240','1440'),state='readonly',width=8).pack(side='left')
+        from history_ui import HistoryView
+        self.history_view = HistoryView(self)
         self.nav_buttons={}
         pages=list(notebook.tabs())
         labels=[('MERCADO',[(0,'Explorar equipamentos')]),
                 ('FLIPPING',[(2,'Encontrar rotas'),(5,'Simular operação')]),
-                ('PRODUÇÃO',[(6,'Planejar craft')])]
+                ('PRODUÇÃO',[(6,'Planejar craft')]),
+                ('HISTÓRICO',[(7,'Operações registradas')])]
         self.page_names={0:'Oportunidades de flipping',2:'Rotas de compra e venda',5:'Simular flipping',
-                         6:'Planejar craft',1:'Preços por cidade',4:'Comparar preços',3:'Ordens coletadas'}
+                         6:'Planejar craft',1:'Preços por cidade',4:'Comparar preços',3:'Ordens coletadas',
+                         7:'Histórico de operações'}
         for section,links in labels:
             ttk.Label(sidebar,text=section,foreground='#73879D',font=('Segoe UI',9,'bold')).pack(anchor='w',pady=(14,6))
             for index,label in links:
@@ -240,12 +244,14 @@ class Dashboard(CatalogSearch):
             3:'Ordens observadas no jogo e compartilhadas pelo AODP. A idade indica quando o app recebeu a observação, não uma venda.',
             4:'Comparação de ofertas de venda e pedidos de compra observados no fluxo AODP; não é histórico de negócios concluídos.',
             5:'Preços copiados de uma rota são observados; preços digitados são manuais, não verificados. Lucro é uma estimativa.',
-            6:'Consulta de ofertas e pedidos via AODP (fluxo e API Américas). Valores manuais são identificados; custos e lucros são calculados.'}
+            6:'Consulta de ofertas e pedidos via AODP (fluxo e API Américas). Valores manuais são identificados; custos e lucros são calculados.',
+            7:'Operações que você registrou manualmente nas calculadoras. Lucro previsto vem do cálculo exibido; lucro realizado só existe após você confirmar o que comprou/vendeu de fato.'}
         self.price_origin.configure(text=explanations[index])
         self.page_title.configure(text=self.page_names[index])
         for key,button in self.nav_buttons.items():
             button.configure(style='Active.Nav.TButton' if key==index else 'Nav.TButton')
-        if index in (5,6):
+        if index==7:self.history_view.refresh()
+        if index in (5,6,7):
             self.market_filters.pack_forget()
             self.export_status.pack_forget()
         else:

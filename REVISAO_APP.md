@@ -1,3 +1,18 @@
+# Revisão do aplicativo — 15/09/2026 (parte 3)
+
+## Histórico de operações: previsto x realizado
+
+Item pendente identificado na avaliação de maturidade do produto ("faltam histórico de transações próprias... e gestão de várias receitas salvas") agora tem uma primeira versão:
+
+- `history.py`: módulo novo, mesmo padrão de `production_profiles.py` — leitura/escrita atômica com backup, versão de formato, rejeição de arquivo malformado sem sobrescrever.
+- Botão **Registrar operação** nas calculadoras de flipping e craft: grava os valores exibidos no cálculo (preços, quantidade, lucro previsto) usando as mesmas funções `flipping()`/`crafting()` já testadas — nenhuma lógica de cálculo duplicada.
+- Nova aba **Histórico**: lista operações, resumo previsto x realizado, confirmação de execução real (flipping recalcula com a fórmula completa; craft usa a diferença simples entre gasto e recebido real, explicitamente rotulada como mais simples que a previsão econômica).
+- `historico.json` é dado do usuário: entrou no `.gitignore`, nunca é lido/escrito pelos testes (que apontam para um arquivo temporário).
+
+Não incluído nesta rodada: múltiplas receitas salvas / biblioteca de receitas, e qualquer tentativa de detectar execução automaticamente — o app continua sem acesso ao jogo, então confirmação sempre é manual.
+
+Validação: 102 testes passaram (15 novos: histórico isolado e integração com a interface).
+
 # Revisão do aplicativo — 15/09/2026 (parte 2)
 
 ## Coerência do craft/flipping e planejador mais proativo

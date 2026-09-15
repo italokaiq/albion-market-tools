@@ -12,7 +12,7 @@ A API de preços não fornece a quantidade disponível. Por isso seus valores co
 
 Na página Oportunidades, a lista inicia em **Equipamentos coletados**: equipamentos com dados recentes aparecem mesmo sem rota lucrativa. Selecione um deles para comparar os preços no gráfico. O seletor **Oportunidades de flipping** restringe a lista às rotas e respeita o filtro de margem positiva. Sem resultados, uma mensagem explica se faltam dados ou rotas. A pesquisa aceita palavras separadas, como `espada T4` ou `anciao 8.2`, ignorando acentos. A lista depende dos dados coletados e dos filtros; não representa todo o catálogo do jogo. Preços ausentes continuam identificados, sem valores inventados.
 
-A interface usa navegação lateral em três áreas: **Flipping**, **Craft** e **Mercado**. Flipping reúne oportunidades, rotas e simulação; Craft concentra o planejamento da produção; Mercado contém a matriz e os dados detalhados. Os filtros gerais aparecem apenas nas telas de mercado e rotas. Use **Mais filtros** para qualidade, tier, encantamento, transporte e demais opções. O perfil Premium/sem Premium fica no rodapé do menu lateral.
+A interface usa navegação lateral em quatro áreas: **Mercado**, **Flipping**, **Produção** e **Histórico**. Mercado contém a matriz e os dados detalhados; Flipping reúne oportunidades, rotas e simulação; Produção concentra o planejamento do craft; Histórico guarda as operações que você registrou manualmente. Os filtros gerais aparecem apenas nas telas de mercado e rotas. Use **Mais filtros** para qualidade, tier, encantamento, transporte e demais opções. O perfil Premium/sem Premium fica no rodapé do menu lateral.
 
 Nas calculadoras, os rótulos ficam acima dos campos e os resultados com e sem Premium aparecem lado a lado em uma tabela. Custos avançados e explicações são expansíveis. Em Craft, informe o custo da estação e o retorno nos campos principais. Abra a seção de custos adicionais para transporte, diários e Foco. A tela tem rolagem para receitas maiores. Os custos continuam incluídos quando a seção é recolhida.
 
@@ -144,6 +144,19 @@ A comparação agora sinaliza quando a opção mais barata de um material — ou
 Na calculadora de flipping, **Usar rota selecionada** e o gráfico da Visão geral passaram a usar a mesma fonte de preços por cidade. Sem uma rota do fluxo com volume conhecido, a calculadora oferece uma simulação de referência com a mesma margem do gráfico (que pode incluir preços da API), claramente identificada como volume desconhecido e sem limite de lote artificial.
 
 Validação: 87 testes passaram.
+
+## Histórico de operações — 15/09/2026
+
+As calculadoras de **flipping** e **craft** ganharam o botão **Registrar operação**: ele salva no histórico local (`historico.json`, gravação atômica com backup, como as demais preferências) exatamente os valores exibidos no cálculo naquele momento — preços, quantidade, lucro previsto. Nada é inferido do fluxo ou da API: uma operação só entra no histórico se você clicar no botão.
+
+A nova aba **Histórico** lista as operações registradas, com um resumo (operações registradas, confirmadas, lucro previsto total, lucro realizado total). Selecionando uma operação e clicando em **Confirmar execução**, você informa o que realmente aconteceu:
+
+- **Flipping**: compra/venda/quantidade/transporte reais, recalculados com a mesma fórmula da calculadora (mesma taxa Premium/sem Premium usada ao registrar).
+- **Craft**: prata total gasta e prata total recebida — o lucro realizado é a diferença simples entre os dois, deliberadamente mais simples que o cálculo econômico da previsão (que também desconta recursos devolvidos). A tela deixa essa diferença explícita, para não confundir os dois números.
+
+Operações sem confirmação aparecem como "Prevista, sem confirmação"; é possível remover uma entrada registrada por engano. O arquivo de histórico é local e pessoal — está no `.gitignore`, como `preferencias.json` e `perfis_producao.json`.
+
+Validação: 102 testes passaram, incluindo gravação/confirmação/remoção do histórico, rejeição de registro com dados inválidos e a tela de histórico.
 
 ## Perfis, recuperação e diagnóstico
 

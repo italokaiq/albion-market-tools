@@ -7,6 +7,7 @@ from economics import flipping, crafting
 from trading import CITIES, selected_item_margin
 from ui_design import disclosure,result_table,fill_results
 from craft_prices import CraftPrices
+from history import History
 
 
 def money(v):
@@ -17,6 +18,7 @@ class Calculators(CraftPrices):
     def __init__(self,app):
         self.app=app
         self.saved=Path(__file__).with_name('receita_craft.json')
+        self.history=History()
         self.flip_fields={}
         self.craft_fields={}
         self.materials=[]
@@ -61,7 +63,9 @@ class Calculators(CraftPrices):
         self.fields(self.flip,self.flip_fields,[('buy_mode','Comprar','Imediata',['Imediata','Ordem de compra']),('sell_mode','Vender','Imediata',['Imediata','Ordem de venda'])])
         advanced=disclosure(self.flip,'Transporte e recriação de ordens')
         self.fields(advanced,self.flip_fields,[('transport','Transporte total','0',None),('buy_relists','Recriações compra','0',None),('sell_relists','Recriações venda','0',None)])
-        ttk.Button(self.flip,text='Usar rota selecionada',command=self.use_route).pack(anchor='w')
+        route_buttons=ttk.Frame(self.flip);route_buttons.pack(anchor='w')
+        ttk.Button(route_buttons,text='Usar rota selecionada',command=self.use_route).pack(side='left')
+        ttk.Button(route_buttons,text='Registrar operação',command=self.record_flip).pack(side='left',padx=8)
         self.flip_note=ttk.Label(self.flip,text='',wraplength=1150)
         self.flip_note.pack(anchor='w',pady=5)
         self.flip_result=ttk.Label(self.flip,text='',font=('Segoe UI',11),wraplength=1000)
@@ -97,7 +101,7 @@ class Calculators(CraftPrices):
         ttk.Label(materials,text='Materiais por craft',font=('Segoe UI',12,'bold')).pack(anchor='w',pady=(8,6))
         self.add_material()
         buttons=ttk.Frame(self.craft);buttons.pack(fill='x',pady=4)
-        for label,callback in [('Adicionar material',self.add_material),('Buscar preços recentes',self.load_prices),('Salvar receita',self.save_recipe),('Carregar receita',self.load_recipe)]:
+        for label,callback in [('Adicionar material',self.add_material),('Buscar preços recentes',self.load_prices),('Salvar receita',self.save_recipe),('Carregar receita',self.load_recipe),('Registrar operação',self.record_craft)]:
             ttk.Button(buttons,text=label,command=callback).pack(side='left',padx=(0,8))
         self.craft_note=ttk.Label(self.craft,text='Informe a receita do jogo. Preços ausentes bloqueiam o cálculo; não são tratados como zero.',wraplength=1180)
         self.craft_note.pack(anchor='w')
@@ -244,6 +248,29 @@ class Calculators(CraftPrices):
         self.flip_note.config(text=f"Simulação de referência (mesma margem do gráfico): {cities.get(margin['origin'],margin['origin'])} → "
             f"{cities.get(margin['destination'],margin['destination'])} · Copiado às {time.strftime('%H:%M:%S')}.{unknown}")
 
+    def record_flip(self):
+        """Registra a operação calculada no histórico, com os mesmos valores usados no cálculo exibido."""
+        f={k:v.get() for k,v in self.flip_fields.items()}
+        try:
+            result=flipping(buy=f['buy'],sell=f['sell'],quantity=f['quantity'],
+                buy_order=f['buy_mode']!='Imediata',sell_order=f['sell_mode']!='Imediata',
+                transport=f['transport'],buy_relists=f['buy_relists'],sell_relists=f['sell_relists'],
+                premium=self.app.profile.get()=='Premium')
+        except ValueError as e:
+            self.flip_note.config(text='Não é possível registrar: '+str(e));return
+        item=self.app.selected_variant
+        predicted=dict(buy=f['buy'],sell=f['sell'],quantity=f['quantity'],transport=f['transport'],
+            buy_mode=f['buy_mode'],sell_mode=f['sell_mode'],buy_relists=f['buy_relists'],sell_relists=f['sell_relists'],
+            profile=self.app.profile.get(),net=result['net'],unit_net=result['unit_net'])
+        try:
+            self.history.add(dict(kind='flipping',item=item[0] if item else None,
+                quality=item[1] if item else None,enchantment=item[2] if item else None,
+                label=self.app.catalog.item(item[0]) if item else 'Item não identificado',predicted=predicted))
+        except (OSError,ValueError) as e:
+            self.flip_note.config(text='Não foi possível salvar o histórico: '+str(e));return
+        self.flip_note.config(text=f'Operação registrada no histórico às {time.strftime("%H:%M:%S")}. '
+            f'Lucro previsto: {money(result["net"])} prata. Confirme a execução depois em Histórico.')
+
     def save_recipe(self):
         data=dict(fields={k:v.get() for k,v in self.craft_fields.items()},materials=[{k:v.get() for k,v in m.items()} for _,m in self.materials])
         try:
@@ -271,6 +298,28 @@ class Calculators(CraftPrices):
             self.recipe_title.configure(text='Receita salva: '+self.app.catalog.item(self.craft_fields['code'].get()))
             self.craft_note.config(text='Receita carregada. Busque ou informe os preços atuais.')
         except (OSError,ValueError,KeyError,TypeError) as e:self.craft_note.config(text='Não foi possível carregar: '+str(e))
+
+    def record_craft(self):
+        """Registra a operação de craft calculada no histórico, com os mesmos valores usados no cálculo exibido."""
+        f={k:v.get() for k,v in self.craft_fields.items()}
+        materials=[{k:v.get() for k,v in m.items()} for _,m in self.materials if m['code'].get().strip()]
+        try:
+            result=crafting(materials=materials,crafts=f['crafts'],output_per_craft=f['output'],sell=f['sell'],
+                return_rate=f['rrr'],buy_order=f['buy_mode']!='Imediata',sell_order=f['sell_mode']!='Imediata',
+                station=f['station'],transport=f['transport'],other=f['other'],journal_credit=f['journal'],
+                focus_points=f['focus'],focus_value=f['focus_value'],premium=self.app.profile.get()=='Premium')
+        except ValueError as e:
+            self.craft_note.config(text='Não é possível registrar: '+str(e));return
+        predicted=dict(crafts=f['crafts'],output=result['output'],net=result['net'],cash=result['cash'],
+            upfront=result['upfront'],revenue=result['revenue'],profile=self.app.profile.get())
+        try:
+            self.history.add(dict(kind='craft',product=f['code'],quality=f['quality'],
+                label=self.app.catalog.item(f['code']) if f['code'].strip() else 'Item não identificado',
+                predicted=predicted))
+        except (OSError,ValueError) as e:
+            self.craft_note.config(text='Não foi possível salvar o histórico: '+str(e));return
+        self.craft_note.config(text=f'Operação registrada no histórico às {time.strftime("%H:%M:%S")}. '
+            f'Lucro econômico previsto: {money(result["net"])} prata. Confirme a execução depois em Histórico.')
 
     def refresh(self):
         self.poll_prices()

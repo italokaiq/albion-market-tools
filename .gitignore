@@ -5,5 +5,6 @@ outputs/
 preferencias.json
 receita_craft.json
 perfis_producao.json
+historico.json
 *.json.bak
 logs/
