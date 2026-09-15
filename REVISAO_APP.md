@@ -1,3 +1,21 @@
+# Revisão do aplicativo — 15/09/2026 (parte 11)
+
+## QA comparativo com o Albion Free Market
+
+Pedido do usuário: comparar com albionfreemarket.com (site estabelecido, mesma fonte AODP, catálogo de ~11.968 itens pesquisáveis) para checar se a nossa busca está correta.
+
+**Achado concreto, verificado contra a API real (não presumido)**: diários (`journalitem`) e contratos de trabalhador (`labourercontract`) tinham sido excluídos do nosso catálogo por suposição de que não eram negociáveis. A AFM os trata como categoria pesquisável ("Laborers"). Testado contra `/stats/history/` e `/stats/prices/` da API:
+- Diários: nenhum preço, nunca (atual ou histórico de 30 dias) — a suposição de "não negociável" era **certa** para esse caso.
+- Contratos de trabalhador: sem preço atual, mas **histórico real de negociação** (item vendido em Bridgewatch e Caerleon nos últimos 30 dias) — a suposição estava **errada** aqui.
+
+Adicionadas ao catálogo (`catalog_items.py`): `journalitem`, `labourercontract`, `hideoutitem`, `siegebanner`, `killtrophy`, `rewardtoken`, `trashitem` — todas com nome resolvido corretamente em `items.json` (conferido, não só assumido). Catálogo foi de 9.973 para **10.208** códigos.
+
+**Verificado e confirmado já coberto** (não precisava de mudança): ferramentas de coleta (picaretas etc., já estavam em `weapon` com código `T#_2H_TOOL_*`), artefatos (780 códigos já em `simpleitem`), itens de fazenda (109 já em `farmableitem`) — bati contagens contra as categorias da AFM (Gathering Equipment 32, Artifact 169, Farming 81) e a cobertura já batia.
+
+**Gap conhecido e não perseguido**: a AFM lista "Hardcore Expeditions" (181 itens, recompensas de conteúdo específico tipo masmorra corrompida) que não consegui localizar com confiança nos dados-fonte sem adivinhar convenção de nome — não adicionado para não incluir algo incerto. Também não investigado a fundo: `consumablefrominventoryitem` (categoria grande, 1362 itens, mas contém muita coisa explicitamente marcada `_NONTRADABLE` nos próprios dados — misturada, não óbvia de filtrar corretamente sem mais tempo).
+
+Validação: 168 testes passaram, incluindo os testes atualizados de categorias incluídas/excluídas do catálogo.
+
 # Revisão do aplicativo — 15/09/2026 (parte 10)
 
 ## Redimensionamento e paleta de cores do jogo

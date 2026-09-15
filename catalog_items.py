@@ -1,9 +1,20 @@
 """Catálogo completo de códigos negociáveis no mercado, com variantes de encantamento.
 
-Cobre armas, equipamentos, recursos/refinados, consumíveis, monturas, mobília e
-sementes de fazenda do ao-data/ao-bin-dumps. Categorias não negociadas no mercado
-(diários, contratos de trabalhador, tokens de recompensa, lixo, monturas cosméticas
-etc.) ficam de fora.
+Cobre armas, equipamentos, recursos/refinados, consumíveis, monturas, mobília,
+sementes de fazenda, diários, contratos de trabalhador, bandeiras de cerco,
+itens de esconderijo, troféus de morte e tokens de recompensa do
+ao-data/ao-bin-dumps. Categorias claramente não comercializáveis (dumps
+cosméticos de montaria, itens de rastreamento, itens de arma de
+transformação, itens da Liga de Cristal) ficam de fora.
+
+Comparado em 15/09/2026 contra o catálogo pesquisável do Albion Free Market
+(albionfreemarket.com, ~11.968 itens — ferramenta estabelecida há anos, mesma
+fonte de dados AODP): diários e contratos de trabalhador apareciam lá como
+categoria pesquisável, mas tinham sido excluídos daqui por suposição de que
+não eram negociáveis. Verificado contra a API real antes de incluir: diários
+nunca têm preço observado (permanecem "sem dado" na busca, o que é correto
+e honesto), mas contratos de trabalhador têm histórico real de negociação
+(preço observado em mais de uma cidade nos últimos 30 dias).
 """
 import json
 import re
@@ -11,7 +22,9 @@ from pathlib import Path
 from recipes import many
 
 TRADABLE_KINDS = ('weapon', 'equipmentitem', 'simpleitem', 'consumableitem',
-                   'mount', 'furnitureitem', 'farmableitem')
+                   'mount', 'furnitureitem', 'farmableitem', 'journalitem',
+                   'labourercontract', 'hideoutitem', 'siegebanner', 'killtrophy',
+                   'rewardtoken', 'trashitem')
 LEVEL_SUFFIX = re.compile(r'_LEVEL[1-4]$')
 
 

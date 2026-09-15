@@ -174,6 +174,10 @@ Linhas em branco são ignoradas silenciosamente; uma linha parcialmente preenchi
 
 Validação: 167 testes passaram, incluindo o cálculo isolado de cada linha (comparando com/sem Premium, modo imediato/ordem, vírgula decimal) e o formulário completo — registro simultâneo de várias linhas, linhas em branco ignoradas, erro que preserva a linha.
 
+## Catálogo expandido após QA com o Albion Free Market — 15/09/2026
+
+Comparado o catálogo de busca com o [Albion Free Market](https://albionfreemarket.com) (ferramenta estabelecida, ~11.968 itens, mesma fonte AODP). Achado real, verificado contra a API antes de mudar qualquer coisa: diários e contratos de trabalhador tinham sido excluídos por suposição de não serem negociáveis. Contratos de trabalhador **têm histórico real de negociação** (confirmado via `/stats/history/`); diários realmente nunca são negociados. Adicionados ao catálogo: diários, contratos de trabalhador, bandeiras de cerco, itens de esconderijo, troféus de morte e tokens de recompensa — de 9.973 para 10.208 códigos pesquisáveis. Ferramentas de coleta, artefatos e itens de fazenda já estavam cobertos (conferido, não só assumido).
+
 ## Redimensionamento e paleta do jogo — 15/09/2026
 
 A barra de filtros principal (nome/código, cidade, idade máxima) agora rola horizontalmente quando a janela fica estreita, em vez de simplesmente cortar campos sem aviso — era o caso abaixo de ~1130px de largura. Tamanho mínimo da janela reduzido de 1100×740 para **1000×650**, mais confortável em telas de notebook comuns.

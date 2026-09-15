@@ -23,12 +23,29 @@ class CatalogItemsTest(unittest.TestCase):
         self.assertEqual(codes, ['T4_PLANKS', 'T4_PLANKS@1', 'T4_PLANKS@2',
                                   'T4_PLANKS@3', 'T4_PLANKS@4', 'T4_WOOD'])
 
-    def test_non_tradable_categories_are_excluded(self):
+    def test_occasionally_traded_categories_are_included(self):
+        """Diários, contratos, bandeiras de cerco, esconderijo, troféus e tokens: a AFM
+        (ferramenta estabelecida, mesma fonte AODP) trata como pesquisáveis, e contratos
+        de trabalhador têm histórico real de negociação verificado contra a API."""
         source = {'items': {
             'journalitem': [{'@uniquename': 'T4_JOURNAL_WOOD'}],
             'labourercontract': [{'@uniquename': 'T4_LABOURER_CONTRACT_WOOD'}],
             'trashitem': [{'@uniquename': 'T1_TRASH'}],
+            'hideoutitem': [{'@uniquename': 'UNIQUE_HIDEOUT'}],
+            'siegebanner': [{'@uniquename': 'T4_SIEGE_BANNER'}],
+            'killtrophy': [{'@uniquename': 'UNIQUE_FURNITUREITEM_KILLTROPHY_OPENWORLD_LARGE'}],
+            'rewardtoken': [{'@uniquename': 'QUESTITEM_TOKEN_SMUGGLER'}],
+        }}
+        self.assertEqual(extract(source), ['QUESTITEM_TOKEN_SMUGGLER', 'T1_TRASH',
+            'T4_JOURNAL_WOOD', 'T4_LABOURER_CONTRACT_WOOD', 'T4_SIEGE_BANNER',
+            'UNIQUE_FURNITUREITEM_KILLTROPHY_OPENWORLD_LARGE', 'UNIQUE_HIDEOUT'])
+
+    def test_non_tradable_categories_are_excluded(self):
+        source = {'items': {
             'mountskin': [{'@uniquename': 'SKIN_HORSE_FOUNDER_ASIA_GOLD'}],
+            'trackingitem': [{'@uniquename': 'T4_TRACKINGITEM'}],
+            'transformationweapon': [{'@uniquename': 'T4_2H_TRANSFORMATIONWEAPON'}],
+            'crystalleagueitem': [{'@uniquename': 'CRYSTALLEAGUE_TOKEN'}],
             'simpleitem': [{'@uniquename': 'T4_ORE'}],
         }}
         self.assertEqual(extract(source), ['T4_ORE'])
