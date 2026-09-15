@@ -163,6 +163,17 @@ Operações sem confirmação aparecem como "Prevista, sem confirmação"; é po
 
 Validação: 102 testes passaram, incluindo gravação/confirmação/remoção do histórico, rejeição de registro com dados inválidos e a tela de histórico.
 
+### Registro em lote — 15/09/2026
+
+Pra quem quer logar várias operações já concluídas de uma vez (por exemplo, ao final do dia), o botão **"Registrar várias operações"** abre um formulário com duas abas (Flipping e Craft), cada uma com linhas rápidas de preencher. Como a operação já aconteceu, previsto e realizado ficam **iguais**, calculados uma única vez a partir do que você informar — sem o passo extra de confirmar depois.
+
+- **Flipping**: item (texto livre, só pra identificar na lista), compra/un., venda/un., quantidade, transporte, modo de compra/venda. Usa a mesma fórmula de taxas da calculadora, com o perfil Premium/sem Premium atual da conta.
+- **Craft**: item, crafts, itens/craft, prata gasta e prata recebida — mesmo modelo simples (recebido − gasto) da confirmação individual de craft.
+
+Linhas em branco são ignoradas silenciosamente; uma linha parcialmente preenchida com erro (ex.: faltou o preço de venda) fica destacada na mensagem de status e **não é removida do formulário**, pra você corrigir e tentar de novo — só as linhas que deram certo somem da lista.
+
+Validação: 167 testes passaram, incluindo o cálculo isolado de cada linha (comparando com/sem Premium, modo imediato/ordem, vírgula decimal) e o formulário completo — registro simultâneo de várias linhas, linhas em branco ignoradas, erro que preserva a linha.
+
 ## Correção: travamento com idade máxima alta — 15/09/2026
 
 Idade máxima em 1440 min (24h) podia travar o app depois de uso prolongado: com o banco local acumulando dezenas de milhares de ordens, cada atualização (a cada 1,5s) reprocessava a janela inteira, levando segundos por ciclo. A busca agora corta na janela às **30.000 ordens mais recentes**; o rodapé avisa quando isso acontece, e reduzir a idade máxima mostra a janela completa normalmente (janelas menores raramente chegam perto desse volume). Medido no banco real: de ~3s para ~0,2s por ciclo com 24h e ~370 mil ordens acumuladas.

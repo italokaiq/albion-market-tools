@@ -1,3 +1,15 @@
+# Revisão do aplicativo — 15/09/2026 (parte 9)
+
+## Registro em lote no histórico
+
+Pedido do usuário, depois de conversar sobre como alimentar o histórico diariamente: registrar várias operações concluídas de uma vez, sem passar pela calculadora completa uma a uma.
+
+- `history_ui.flip_entry_from_row()`/`craft_entry_from_row()`: funções puras (sem Tk) que calculam previsto e realizado idênticos para uma operação já concluída — reaproveitam `flipping()` pra flip; craft usa o mesmo modelo simples (recebido − gasto) já usado na confirmação individual. Extraídas deliberadamente do diálogo pra serem testáveis sem simular clique em widget, mesmo padrão de `search_catalog()` em `catalog_search.py`.
+- Diálogo com duas abas (Flipping/Craft), 5 linhas pré-criadas por aba, botão "+ linha" pra mais, "×" por linha pra remover. "Registrar tudo" processa as duas abas: linha em branco é ignorada, linha com erro fica no formulário com a mensagem de status explicando o quê, linha registrada com sucesso some da lista.
+- `self.bulk_flip_rows`/`self.bulk_craft_rows`/`self.bulk_status`/`self.submit_bulk` ficam expostos na instância de `HistoryView` enquanto o diálogo está aberto — não é só estética, é o que permite testar o fluxo completo (preencher campos, registrar, checar o que ficou no histórico) sem depender de navegar a árvore de widgets.
+
+Validação: 167 testes passaram (12 novos), incluindo teste de ponta a ponta com 5 linhas simultâneas (3 flips + 2 crafts) conferindo a tabela principal e os totais do resumo depois do registro.
+
 # Revisão do aplicativo — 15/09/2026 (parte 8)
 
 ## Correção: app travava com idade máxima alta

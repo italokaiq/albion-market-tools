@@ -17,6 +17,28 @@ def money(v):
     return f'{v:,.2f}'.replace(',', '_').replace('.', ',').replace('_', '.')
 
 
+def flip_entry_from_row(buy, sell, quantity, transport, buy_mode, sell_mode, profile):
+    """Uma operação já concluída: previsto e realizado ficam iguais, calculados uma vez."""
+    result = flipping(buy=buy, sell=sell, quantity=quantity, transport=transport,
+        buy_order=buy_mode != 'Imediata', sell_order=sell_mode != 'Imediata', premium=profile == 'Premium')
+    predicted = dict(buy=buy, sell=sell, quantity=quantity, transport=transport,
+        buy_mode=buy_mode, sell_mode=sell_mode, buy_relists='0', sell_relists='0',
+        profile=profile, net=result['net'], unit_net=result['unit_net'])
+    return predicted, dict(predicted)
+
+
+def craft_entry_from_row(crafts, output_per_craft, spent, received, profile):
+    """Modelo simples (recebido - gasto), igual ao usado em 'Confirmar execução' do craft."""
+    crafts_n = float(str(crafts).replace(',', '.'))
+    output_n = float(str(output_per_craft).replace(',', '.'))
+    spent_n = float(str(spent).replace(',', '.'))
+    received_n = float(str(received).replace(',', '.'))
+    net = received_n - spent_n
+    predicted = dict(crafts=str(crafts), output=crafts_n * output_n, net=net, cash=net,
+        upfront=spent_n, revenue=received_n, profile=profile)
+    return predicted, dict(spent=spent_n, received=received_n, net=net)
+
+
 class HistoryView:
     def __init__(self, app):
         self.app = app
@@ -42,6 +64,7 @@ class HistoryView:
         buttons.pack(fill='x', pady=8)
         ttk.Button(buttons, text='Confirmar execução', command=self.open_confirm).pack(side='left')
         ttk.Button(buttons, text='Remover', command=self.remove_selected).pack(side='left', padx=8)
+        ttk.Button(buttons, text='Registrar várias operações', command=self.open_bulk_entry).pack(side='left', padx=8)
         ttk.Button(buttons, text='Atualizar', command=self.refresh).pack(side='left')
         self.status = ttk.Label(self.tab, wraplength=1150, foreground='#A3B5CB')
         self.status.pack(anchor='w', pady=4)
@@ -180,6 +203,117 @@ class HistoryView:
                 message.config(text=str(error));return
             dialog.destroy();self.refresh()
         ttk.Button(frame, text='Confirmar', command=confirm).pack(anchor='e', pady=8)
+
+    def open_bulk_entry(self):
+        """Registra várias operações já concluídas de uma vez: previsto e realizado
+        ficam iguais, calculados a partir dos valores informados — não há distinção
+        de 'antes/depois' para algo que já aconteceu."""
+        dialog = tk.Toplevel(self.app.root)
+        dialog.title('Registrar várias operações')
+        dialog.geometry('1000x600')
+        dialog.transient(self.app.root)
+        frame = ttk.Frame(dialog, padding=14)
+        frame.pack(fill='both', expand=True)
+        ttk.Label(frame, text=f'Para operações já concluídas: previsto e realizado ficam iguais, com os valores '
+                              f'que você informar aqui. Perfil atual: {self.app.profile.get()}. Linhas em branco são ignoradas.',
+                  wraplength=960).pack(anchor='w', pady=(0, 8))
+        tabs = ttk.Notebook(frame)
+        tabs.pack(fill='both', expand=True)
+        flip_rows, flip_rows_frame = self._bulk_rows_area(tabs, 'Flipping',
+            [('item', 'Item', 18, ''), ('buy', 'Compra/un.', 10, ''), ('sell', 'Venda/un.', 10, ''),
+             ('quantity', 'Qtd.', 7, '1'), ('transport', 'Transporte total', 12, '0')],
+            [('buy_mode', 'Comprar', ['Imediata', 'Ordem de compra'], 'Imediata'),
+             ('sell_mode', 'Vender', ['Imediata', 'Ordem de venda'], 'Imediata')])
+        craft_rows, craft_rows_frame = self._bulk_rows_area(tabs, 'Craft',
+            [('item', 'Item', 18, ''), ('crafts', 'Crafts', 7, '1'), ('output', 'Itens/craft', 10, '1'),
+             ('spent', 'Prata gasta', 12, ''), ('received', 'Prata recebida', 12, '')], [])
+        self.bulk_flip_rows,self.bulk_craft_rows = flip_rows,craft_rows  # acessível para testes de integração
+        for _ in range(5):
+            self._add_bulk_row(flip_rows, flip_rows_frame,
+                [('item', 18, ''), ('buy', 10, ''), ('sell', 10, ''), ('quantity', 7, '1'), ('transport', 12, '0')],
+                [('buy_mode', ['Imediata', 'Ordem de compra'], 'Imediata'), ('sell_mode', ['Imediata', 'Ordem de venda'], 'Imediata')])
+            self._add_bulk_row(craft_rows, craft_rows_frame,
+                [('item', 18, ''), ('crafts', 7, '1'), ('output', 10, '1'), ('spent', 12, ''), ('received', 12, '')], [])
+        status = ttk.Label(frame, wraplength=960);status.pack(anchor='w', pady=6)
+        self.bulk_status = status  # acessível para testes de integração
+        def submit():
+            added, errors = 0, []
+            for outer, f in list(flip_rows):
+                item = f['item'].get().strip();buy = f['buy'].get().strip();sell = f['sell'].get().strip()
+                if not item and not buy and not sell:continue
+                try:
+                    predicted, realized = flip_entry_from_row(buy, sell, f['quantity'].get(), f['transport'].get(),
+                        f['buy_mode'].get(), f['sell_mode'].get(), self.app.profile.get())
+                except ValueError as error:
+                    errors.append(f'{item or "(sem nome)"}: {error}');continue
+                try:
+                    entry_id = self.history.add(dict(kind='flipping', item=None, quality=None, enchantment=None,
+                        label=item or 'Item não identificado', predicted=predicted))
+                    self.history.confirm(entry_id, realized)
+                except (OSError, ValueError) as error:
+                    errors.append(f'{item}: {error}');continue
+                outer.destroy();flip_rows.remove((outer, f));added += 1
+            for outer, f in list(craft_rows):
+                item = f['item'].get().strip();spent_text = f['spent'].get().strip();received_text = f['received'].get().strip()
+                if not item and not spent_text and not received_text:continue
+                try:
+                    predicted, realized = craft_entry_from_row(f['crafts'].get(), f['output'].get(), spent_text,
+                        received_text, self.app.profile.get())
+                except ValueError:
+                    errors.append(f'{item or "(sem nome)"}: informe números válidos em crafts, itens/craft, gasto e recebido.');continue
+                try:
+                    entry_id = self.history.add(dict(kind='craft', product=None, quality=None,
+                        label=item or 'Item não identificado', predicted=predicted))
+                    self.history.confirm(entry_id, realized)
+                except (OSError, ValueError) as error:
+                    errors.append(f'{item}: {error}');continue
+                outer.destroy();craft_rows.remove((outer, f));added += 1
+            self.refresh()
+            if errors:
+                status.config(text=(f'{added} registrada(s). ' if added else 'Nada registrado. ')
+                    + 'Corrija: ' + ' | '.join(errors), foreground='#F0AAAA')
+            elif added:
+                status.config(text=f'{added} operação(ões) registrada(s) e confirmada(s).', foreground='#8EDFC3')
+            else:
+                status.config(text='Nenhuma linha preenchida.', foreground='#A3B5CB')
+        self.submit_bulk = submit  # acessível para testes de integração
+        ttk.Button(frame, text='Registrar tudo', command=submit).pack(anchor='e', pady=4)
+
+    def _bulk_rows_area(self, tabs, title, entry_specs, combo_specs):
+        tab = ttk.Frame(tabs, padding=8)
+        tabs.add(tab, text=title)
+        header = ttk.Frame(tab);header.pack(fill='x')
+        for key, label, width, default in entry_specs:
+            ttk.Label(header, text=label, width=width, foreground='#A3B5CB').pack(side='left', padx=(0, 3))
+        for key, label, values, default in combo_specs:
+            ttk.Label(header, text=label, width=13, foreground='#A3B5CB').pack(side='left', padx=(0, 3))
+        rows = []
+        entry_key_specs = [(k, w, d) for k, _, w, d in entry_specs]
+        combo_key_specs = [(k, v, d) for k, _, v, d in combo_specs]
+        canvas = tk.Canvas(tab, highlightthickness=0, background='#101B2B')
+        scrollbar = ttk.Scrollbar(tab, orient='vertical', command=canvas.yview)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        add_button = ttk.Button(tab, text='+ linha', command=lambda: self._add_bulk_row(rows, rows_frame, entry_key_specs, combo_key_specs))
+        add_button.pack(anchor='w', pady=4)
+        scrollbar.pack(side='right', fill='y');canvas.pack(side='left', fill='both', expand=True)
+        rows_frame = ttk.Frame(canvas)
+        window = canvas.create_window((0, 0), window=rows_frame, anchor='nw')
+        rows_frame.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
+        canvas.bind('<Configure>', lambda e: canvas.itemconfigure(window, width=e.width))
+        return rows, rows_frame
+
+    def _add_bulk_row(self, rows, rows_frame, entry_specs, combo_specs):
+        outer = ttk.Frame(rows_frame);outer.pack(fill='x', pady=1)
+        fields = {}
+        for key, width, default in entry_specs:
+            fields[key] = tk.StringVar(value=default)
+            ttk.Entry(outer, textvariable=fields[key], width=width).pack(side='left', padx=(0, 3))
+        for key, values, default in combo_specs:
+            fields[key] = tk.StringVar(value=default)
+            ttk.Combobox(outer, textvariable=fields[key], values=values, state='readonly', width=13).pack(side='left', padx=(0, 3))
+        entry = (outer, fields)
+        ttk.Button(outer, text='×', width=2, command=lambda: (outer.destroy(), rows.remove(entry))).pack(side='left')
+        rows.append(entry)
 
 
 def _parse(iso_text):
