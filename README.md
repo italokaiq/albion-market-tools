@@ -28,7 +28,7 @@ Abra `iniciar.cmd`. Toda a análise funciona na janela do programa, sem Excel, p
 - **Onde comprar e vender**: origem, destino, preços, margem após custos, quantidade limite e idade dos dados. Por padrão só aparecem rotas com margem positiva; desmarque a opção para ver também as negativas.
 - **Ordens observadas** e **Comparar mercados**: detalhes da coleta e preços por qualidade e cidade.
 
-No gráfico, azul é o preço para comprar de uma oferta de venda e verde é o preço pago por uma ordem de compra. Cada preço mostra sua idade. Sem observação recente, aparece “sem dado”. O tamanho da barra compara preços, não volume de vendas.
+No gráfico, azul é o preço para comprar de uma oferta de venda e dourado é o preço pago por uma ordem de compra. Cada preço mostra sua idade. Sem observação recente, aparece “sem dado”. O tamanho da barra compara preços, não volume de vendas.
 
 Escolha **Premium** ou **Sem Premium** no painel. As rotas imediatas usam respectivamente 4% ou 8% de taxa sobre a venda, além do transporte por unidade que você informar. O padrão é Sem Premium. As configurações são salvas ao fechar a janela. O cálculo é `venda × (1 − taxa) − compra − transporte`. A quantidade limite é o menor volume observado nos dois melhores preços. Não se presume liquidez além desse volume, nem se estima perda de carga durante o transporte.
 
@@ -173,6 +173,12 @@ Pra quem quer logar várias operações já concluídas de uma vez (por exemplo,
 Linhas em branco são ignoradas silenciosamente; uma linha parcialmente preenchida com erro (ex.: faltou o preço de venda) fica destacada na mensagem de status e **não é removida do formulário**, pra você corrigir e tentar de novo — só as linhas que deram certo somem da lista.
 
 Validação: 167 testes passaram, incluindo o cálculo isolado de cada linha (comparando com/sem Premium, modo imediato/ordem, vírgula decimal) e o formulário completo — registro simultâneo de várias linhas, linhas em branco ignoradas, erro que preserva a linha.
+
+## Redimensionamento e paleta do jogo — 15/09/2026
+
+A barra de filtros principal (nome/código, cidade, idade máxima) agora rola horizontalmente quando a janela fica estreita, em vez de simplesmente cortar campos sem aviso — era o caso abaixo de ~1130px de largura. Tamanho mínimo da janela reduzido de 1100×740 para **1000×650**, mais confortável em telas de notebook comuns.
+
+O visual mudou de azul-marinho com destaque verde-menta para uma paleta inspirada no jogo: fundo carvão/marrom escuro, destaque dourado/bronze, texto em tom pergaminho. Baseado em pesquisa real (cores de qualidade/tier/encantamento do próprio jogo), não em suposição. **Isso não foi verificado visualmente** — o ambiente onde essas mudanças foram feitas não tem como renderizar/ver a janela Tkinter; foi validado que nada quebra (compila, nenhum erro de cor inválida em nenhuma das 8 abas ou diálogos, suíte completa passa), mas o resultado visual em si precisa da sua conferência.
 
 ## Correção: travamento com idade máxima alta — 15/09/2026
 

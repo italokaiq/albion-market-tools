@@ -22,9 +22,9 @@ def result_table(parent):
     for key,title,width in [('label','Resultado em prata',300),('premium','Premium',200),('standard','Sem Premium',200)]:
         table.heading(key,text=title)
         table.column(key,width=width,anchor='w' if key=='label' else 'e',stretch=True)
-    table.tag_configure('profit',foreground='#91D4B9',background='#1C3430')
-    table.tag_configure('loss',foreground='#F0AAAA',background='#3B2429')
-    table.tag_configure('mixed',foreground='#E5CB91',background='#363026')
+    table.tag_configure('profit',foreground='#D4AF37',background='#3D3018')
+    table.tag_configure('loss',foreground='#D9827E',background='#3D1F1B')
+    table.tag_configure('mixed',foreground='#D4AF37',background='#363026')
     table.pack(fill='x',pady=10)
     return table
 

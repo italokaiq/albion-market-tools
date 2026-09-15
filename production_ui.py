@@ -63,13 +63,13 @@ class ProductionPlanner:
         self.recommendation=ttk.Label(summary,text='Ainda sem recomendação — preencha os custos em Custos e retornos.',
                                        font=('Segoe UI',13,'bold'),wraplength=1020)
         self.recommendation.pack(anchor='w')
-        ttk.Label(summary,text='O que falta / próximo passo',foreground='#A3B5CB').pack(anchor='w',pady=(8,0))
+        ttk.Label(summary,text='O que falta / próximo passo',foreground='#B3A78C').pack(anchor='w',pady=(8,0))
         self.next_step=ttk.Label(summary,text='1. Consulte preços → 2. Confirme custos → 3. Compare as alternativas.',wraplength=1020)
         self.next_step.pack(anchor='w',pady=3)
         tabs=ttk.Notebook(frame);tabs.pack(fill='both',expand=True)
         self.tabs=tabs
         settings_shell=ttk.Frame(tabs);tabs.add(settings_shell,text='1. Custos e retornos')
-        settings_canvas=tk.Canvas(settings_shell,highlightthickness=0,background='#101B2B')
+        settings_canvas=tk.Canvas(settings_shell,highlightthickness=0,background='#171310')
         settings_scroll=ttk.Scrollbar(settings_shell,command=settings_canvas.yview)
         settings_canvas.configure(yscrollcommand=settings_scroll.set)
         settings_scroll.pack(side='right',fill='y');settings_canvas.pack(side='left',fill='both',expand=True)
@@ -98,12 +98,12 @@ class ProductionPlanner:
         self.stage_box.bind('<<ComboboxSelected>>',self.change_stage)
         ttk.Button(settings,text='Confirmar custos e comparar',command=self.confirm_costs).pack(anchor='w',pady=10)
         self.route_table=self.app.make_table(tabs,'2. Craft e venda',[('Craftar em',140),('Vender em',140),('Lucro esperado',140),('Custo econômico',145),('Desembolso bruto¹',145),('Idade',85),('Cobertura de volume',150)])
-        self.route_table.tag_configure('shortfall',foreground='#F4D08B')
+        self.route_table.tag_configure('shortfall',foreground='#E8C766')
         ttk.Button(summary,text='Ver comparação',command=lambda:tabs.select(1)).pack(anchor='w')
         self.supply_table=self.app.make_table(tabs,'3. Comprar ou refinar',[('Material',235),('Entregar em',130),('Alternativa',130),('Comprar/refinar em',150),('Custo/un.',100),('Desembolso/un.¹',140)])
         self.market_table=self.app.make_table(tabs,'4. Preços observados',[('Item',290),('Cidade',130),('Lado',100),('Prata/un.',100),('Idade',85),('Fonte / volume',170)])
         detail_frame=ttk.Frame(frame);detail_frame.pack(fill='x',pady=6)
-        self.detail=tk.Text(detail_frame,height=6,wrap='word',background='#16263A',foreground='#DFEAF7');self.detail.pack(side='left',fill='x',expand=True)
+        self.detail=tk.Text(detail_frame,height=6,wrap='word',background='#221D17',foreground='#EDE6D6');self.detail.pack(side='left',fill='x',expand=True)
         detail_scroll=ttk.Scrollbar(detail_frame,command=self.detail.yview);detail_scroll.pack(side='right',fill='y');self.detail.configure(yscrollcommand=detail_scroll.set)
         self.detail.insert('1.0','Selecione uma rota para ver a cadeia de materiais.\n¹ Desembolso bruto sem reutilizar retornos. Retornos e custos unitários são expectativas; não garantem volume, execução ou lucro.');self.detail.config(state='disabled')
         self.route_table.bind('<<TreeviewSelect>>',self.show_route)
@@ -243,13 +243,13 @@ class ProductionPlanner:
         ref_count=sum(key[0]!='craft' for key in valid)
         missing=self.result['missing']
         if count==0:
-            self.recommendation.config(text='Ainda sem recomendação.',foreground='#A3B5CB')
+            self.recommendation.config(text='Ainda sem recomendação.',foreground='#B3A78C')
             self.next_step.config(text='Confirme retorno e custo da estação em pelo menos uma cidade de craft. As outras cidades permanecem fora da avaliação.')
         elif missing:
-            self.recommendation.config(text='Ainda sem recomendação.',foreground='#A3B5CB')
+            self.recommendation.config(text='Ainda sem recomendação.',foreground='#B3A78C')
             self.next_step.config(text='Faltam preços para: '+', '.join(self.app.catalog.item(c) for c in missing)+'. Consulte Preços observados ou atualize a coleta.')
         elif not routes:
-            self.recommendation.config(text='Ainda sem recomendação.',foreground='#A3B5CB')
+            self.recommendation.config(text='Ainda sem recomendação.',foreground='#B3A78C')
             self.next_step.config(text='Não há preço de venda recente para concluir a comparação. Confira qualidade, modo de venda e idade máxima.')
         else:
             best=routes[0]
@@ -261,10 +261,10 @@ class ProductionPlanner:
             if best['net']>0:
                 self.recommendation.config(text=f"Melhor opção avaliada: craft em {names[best['city']]} → vender em {names[best['destination']]} · "
                     f"lucro econômico esperado {money(best['net'])} prata"+(' · cobertura de volume parcial' if best['shortfalls'] else ''),
-                    foreground='#8EDFC3')
+                    foreground='#D4AF37')
             else:
                 self.recommendation.config(text=f"Nenhuma opção avaliada tem lucro positivo. A menos ruim: craft em {names[best['city']]} → "
-                    f"vender em {names[best['destination']]} · {money(best['net'])} prata.",foreground='#F0AAAA')
+                    f"vender em {names[best['destination']]} · {money(best['net'])} prata.",foreground='#D9827E')
             self.next_step.config(text=f"{coverage} · {count}/7 cidades de craft · {ref_count}/{(len(self.stages)-1)*7} etapas/cidades de refino configuradas. "
                 +'Selecione uma rota abaixo para conferir a cadeia de custos. Cobertura de preços pode ser incompleta.'
                 +shortfall_note)

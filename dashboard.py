@@ -40,31 +40,31 @@ class Dashboard(CatalogSearch):
         self.price_history=PriceHistory(enabled=start_feed)
         root.title('Albion • Mercado Américas')
         root.geometry('1440x900')
-        root.minsize(1100, 740)
+        root.minsize(1000, 650)
         style = ttk.Style()
         style.theme_use('clam')
-        root.configure(background='#101B2B')
-        style.configure('.',background='#101B2B',foreground='#E1EAF5',font=('Segoe UI',10))
-        style.configure('TEntry',fieldbackground='#203249',foreground='#FFFFFF')
-        style.configure('TCombobox',fieldbackground='#203249',foreground='#FFFFFF')
-        style.map('TCombobox',fieldbackground=[('readonly','#203249')],foreground=[('readonly','#FFFFFF')])
-        style.configure('Treeview', rowheight=30, font=('Segoe UI', 10),background='#16263A',fieldbackground='#16263A',foreground='#DFEAF7')
-        style.configure('Treeview.Heading',background='#28485A',foreground='#FFFFFF',font=('Segoe UI',10,'bold'))
-        style.map('Treeview',background=[('selected','#315775')],foreground=[('selected','#FFFFFF')])
+        root.configure(background='#171310')
+        style.configure('.',background='#171310',foreground='#EDE6D6',font=('Segoe UI',10))
+        style.configure('TEntry',fieldbackground='#2C2418',foreground='#FFFFFF')
+        style.configure('TCombobox',fieldbackground='#2C2418',foreground='#FFFFFF')
+        style.map('TCombobox',fieldbackground=[('readonly','#2C2418')],foreground=[('readonly','#FFFFFF')])
+        style.configure('Treeview', rowheight=30, font=('Segoe UI', 10),background='#221D17',fieldbackground='#221D17',foreground='#EDE6D6')
+        style.configure('Treeview.Heading',background='#4A3820',foreground='#FFFFFF',font=('Segoe UI',10,'bold'))
+        style.map('Treeview',background=[('selected','#6B4F23')],foreground=[('selected','#FFFFFF')])
         style.configure('TNotebook.Tab',padding=(14,8))
-        style.map('TNotebook.Tab',background=[('selected','#28485A')])
+        style.map('TNotebook.Tab',background=[('selected','#4A3820')])
         style.layout('Pages.TNotebook.Tab',[])
         style.configure('Pages.TNotebook',borderwidth=0)
-        style.configure('TButton',padding=(12,7),background='#233246',foreground='#E1EAF5',borderwidth=0)
-        style.map('TButton',background=[('active','#31475D')])
-        style.configure('Quiet.TButton',background='#101B2B',foreground='#A3B5CB')
-        style.configure('Nav.TButton',anchor='w',padding=(15,11),background='#101B2B',foreground='#A3B5CB')
-        style.configure('Active.Nav.TButton',background='#244239',foreground='#B4E8D1')
+        style.configure('TButton',padding=(12,7),background='#2E2718',foreground='#EDE6D6',borderwidth=0)
+        style.map('TButton',background=[('active','#3D3220')])
+        style.configure('Quiet.TButton',background='#171310',foreground='#B3A78C')
+        style.configure('Nav.TButton',anchor='w',padding=(15,11),background='#171310',foreground='#B3A78C')
+        style.configure('Active.Nav.TButton',background='#4A3820',foreground='#E8C766')
         style.configure('TEntry',padding=6)
         sidebar=ttk.Frame(root,padding=(18,25),width=185)
         sidebar.pack(side='left',fill='y');sidebar.pack_propagate(False)
         ttk.Label(sidebar,text='ALBION',font=('Segoe UI',18,'bold')).pack(anchor='w')
-        ttk.Label(sidebar,text='Market desk',foreground='#93A5BA').pack(anchor='w',pady=(2,30))
+        ttk.Label(sidebar,text='Market desk',foreground='#B3A78C').pack(anchor='w',pady=(2,30))
         self.sidebar=sidebar
         frame = ttk.Frame(root, padding=(16,22))
         frame.pack(fill='both', expand=True)
@@ -72,10 +72,23 @@ class Dashboard(CatalogSearch):
         self.page_title.pack(anchor='w')
         self.status = ttk.Label(frame, wraplength=1250)
         self.status.pack(anchor='w', pady=10)
-        self.price_origin=ttk.Label(frame,wraplength=1150,foreground='#A3B5CB')
+        self.price_origin=ttk.Label(frame,wraplength=1150,foreground='#B3A78C')
         self.price_origin.pack(anchor='w',pady=(0,6))
-        self.market_filters=ttk.Frame(frame)
-        self.market_filters.pack(fill='x',pady=(4,8))
+        self.filters_shell=ttk.Frame(frame)
+        self.filters_shell.pack(fill='x',pady=(4,8))
+        filters_canvas=tk.Canvas(self.filters_shell,highlightthickness=0,background='#171310')
+        filters_hscroll=ttk.Scrollbar(self.filters_shell,orient='horizontal',command=filters_canvas.xview)
+        filters_canvas.configure(xscrollcommand=filters_hscroll.set)
+        filters_canvas.pack(fill='x')
+        self.market_filters=ttk.Frame(filters_canvas)
+        filters_window=filters_canvas.create_window((0,0),window=self.market_filters,anchor='nw')
+        def sync_filters_scroll(event=None):
+            filters_canvas.configure(scrollregion=filters_canvas.bbox('all'),height=self.market_filters.winfo_reqheight())
+            need_scroll=self.market_filters.winfo_reqwidth()>filters_canvas.winfo_width()
+            if need_scroll:filters_hscroll.pack(fill='x')
+            else:filters_hscroll.pack_forget()
+        self.market_filters.bind('<Configure>',sync_filters_scroll)
+        filters_canvas.bind('<Configure>',lambda e:(filters_canvas.itemconfigure(filters_window,height=e.height),sync_filters_scroll()))
         self.filters = {}
         from ui_design import disclosure
         advanced=None
@@ -106,7 +119,7 @@ class Dashboard(CatalogSearch):
             self.profile.set('Sem Premium')
         self.tax = tk.StringVar(value='4' if self.profile.get()=='Premium' else '8')
         self.transport = tk.StringVar(value=str(self.saved_settings.get('transport','0')))
-        ttk.Label(sidebar,text='CONTA',foreground='#73879D',font=('Segoe UI',9,'bold')).pack(side='bottom',anchor='w',pady=5)
+        ttk.Label(sidebar,text='CONTA',foreground='#8F8570',font=('Segoe UI',9,'bold')).pack(side='bottom',anchor='w',pady=5)
         profile=ttk.Combobox(sidebar,textvariable=self.profile,values=('Premium','Sem Premium'),state='readonly',width=15)
         profile.pack(side='bottom',fill='x',pady=8)
         profile.bind('<<ComboboxSelected>>',lambda event:self.tax.set('4' if self.profile.get()=='Premium' else '8'))
@@ -117,7 +130,7 @@ class Dashboard(CatalogSearch):
         self.positive_only = tk.BooleanVar(value=True)
         ttk.Checkbutton(controls,text='Só rotas com margem positiva',variable=self.positive_only).pack(side='left',padx=8)
         ttk.Button(controls,text='Limpar filtros',command=self.clear_filters).pack(side='left',padx=3)
-        self.export_status = ttk.Label(frame,text='',wraplength=1150,foreground='#94A8BD')
+        self.export_status = ttk.Label(frame,text='',wraplength=1150,foreground='#B3A78C')
         self.export_status.pack(anchor='w',pady=(0,8))
         notebook = ttk.Notebook(frame,style='Pages.TNotebook')
         self.notebook = notebook
@@ -131,8 +144,8 @@ class Dashboard(CatalogSearch):
                           ('positive','Rotas com margem positiva'),('best','Melhor margem / unidade')]:
             card = ttk.Frame(cards,padding=8)
             card.pack(side='left',fill='x',expand=True)
-            ttk.Label(card,text=label,foreground='#A3B5CB').pack(anchor='w')
-            number = ttk.Label(card,text='—',font=('Segoe UI',19,'bold'),foreground='#8EDFC3')
+            ttk.Label(card,text=label,foreground='#B3A78C').pack(anchor='w')
+            number = ttk.Label(card,text='—',font=('Segoe UI',19,'bold'),foreground='#D4AF37')
             number.pack(anchor='w')
             self.metrics[key] = number
         split = ttk.Panedwindow(self.overview,orient='horizontal')
@@ -144,16 +157,16 @@ class Dashboard(CatalogSearch):
         self.overview_mode=tk.StringVar(value='Equipamentos coletados')
         ttk.Combobox(list_controls,textvariable=self.overview_mode,
                      values=('Equipamentos coletados','Oportunidades de flipping'),state='readonly',width=27).pack(side='left')
-        self.list_status=ttk.Label(left,text='',wraplength=620,foreground='#A3B5CB')
+        self.list_status=ttk.Label(left,text='',wraplength=620,foreground='#B3A78C')
         self.list_status.pack(anchor='w',pady=5)
         self.top_routes = self.make_table(left,None,[('Equipamento',230),('Comprar em',110),('Vender em',120),('Margem/un.',100),('Qtd.',55)])
-        self.api_status=ttk.Label(right,text='',wraplength=480,foreground='#A3B5CB')
+        self.api_status=ttk.Label(right,text='',wraplength=480,foreground='#B3A78C')
         self.api_status.pack(anchor='w',padx=12,pady=5)
         right_tabs=ttk.Notebook(right)
         right_tabs.pack(fill='both',expand=True,padx=(12,0))
         compare_tab=ttk.Frame(right_tabs,padding=(0,6))
         right_tabs.add(compare_tab,text='Comparação por cidade')
-        self.chart = tk.Canvas(compare_tab,background='#16263A',highlightthickness=0,width=480,height=260)
+        self.chart = tk.Canvas(compare_tab,background='#221D17',highlightthickness=0,width=480,height=260)
         self.chart.pack(fill='x')
         self.selected_margin=ttk.Label(compare_tab,text='',wraplength=460,font=('Segoe UI',10,'bold'))
         self.selected_margin.pack(fill='x',pady=8)
@@ -162,7 +175,7 @@ class Dashboard(CatalogSearch):
         self.catalog_selection = None
         ttk.Button(list_controls,text='Buscar no catálogo',command=self.choose_market_item).pack(side='left',padx=8)
         ttk.Button(compare_tab,text='Simular rota selecionada',command=lambda:self.open_route_summary()).pack(anchor='w')
-        ttk.Label(compare_tab,text='Comparação por cidade',foreground='#A3B5CB').pack(anchor='w',pady=(10,2))
+        ttk.Label(compare_tab,text='Comparação por cidade',foreground='#B3A78C').pack(anchor='w',pady=(10,2))
         self.city_compare = self.make_table(compare_tab,None,[('Cidade',105),('Comprar por',95),('Idade/origem compra',150),
                                                           ('Vender por',95),('Idade/origem venda',150)])
         history_tab=ttk.Frame(right_tabs,padding=(0,6))
@@ -179,9 +192,9 @@ class Dashboard(CatalogSearch):
         ttk.Combobox(history_controls,textvariable=self.history_city,values=[c[1] for c in CITIES],
                      state='readonly',width=13).pack(side='left')
         self.history_city.trace_add('write',lambda *a:self.draw_history_chart())
-        self.history_status=ttk.Label(history_tab,text='',foreground='#A3B5CB',wraplength=460)
+        self.history_status=ttk.Label(history_tab,text='',foreground='#B3A78C',wraplength=460)
         self.history_status.pack(anchor='w',pady=4)
-        self.history_chart=tk.Canvas(history_tab,background='#16263A',highlightthickness=0,width=480,height=280)
+        self.history_chart=tk.Canvas(history_tab,background='#221D17',highlightthickness=0,width=480,height=280)
         self.history_chart.pack(fill='both',expand=True)
         self.history_chart.bind('<Configure>',lambda event:self.draw_history_chart())
         self.top_routes.bind('<<TreeviewSelect>>',self.select_route)
@@ -220,7 +233,7 @@ class Dashboard(CatalogSearch):
                          6:'Planejar craft',1:'Preços por cidade',4:'Comparar preços',3:'Ordens coletadas',
                          7:'Histórico de operações'}
         for section,links in labels:
-            ttk.Label(sidebar,text=section,foreground='#73879D',font=('Segoe UI',9,'bold')).pack(anchor='w',pady=(14,6))
+            ttk.Label(sidebar,text=section,foreground='#8F8570',font=('Segoe UI',9,'bold')).pack(anchor='w',pady=(14,6))
             for index,label in links:
                 button=ttk.Button(sidebar,text=label,style='Nav.TButton',command=lambda p=pages[index]:notebook.select(p))
                 button.pack(fill='x',pady=2)
@@ -233,7 +246,7 @@ class Dashboard(CatalogSearch):
         self.page_changed()
         self.footer = ttk.Label(frame)
         self.footer.pack(anchor='w', pady=8)
-        ttk.Label(frame,text='Fonte: AODP · Preços observados, sujeitos a alteração · Sem Office',foreground='#73879D').pack(anchor='w')
+        ttk.Label(frame,text='Fonte: AODP · Preços observados, sujeitos a alteração · Sem Office',foreground='#8F8570').pack(anchor='w')
         root.protocol('WM_DELETE_WINDOW', self.close)
         if start_feed:
             threading.Thread(target=feed.run, daemon=True).start()
@@ -249,9 +262,9 @@ class Dashboard(CatalogSearch):
         for i,(label,width) in enumerate(specs):
             table.heading(i,text=label)
             table.column(i,width=width,minwidth=60,anchor='w')
-        table.tag_configure('fresh',foreground='#A9E3C4')
-        table.tag_configure('warm',foreground='#F4D08B')
-        table.tag_configure('old',foreground='#F4A9A9')
+        table.tag_configure('fresh',foreground='#8FBF7A')
+        table.tag_configure('warm',foreground='#E8C766')
+        table.tag_configure('old',foreground='#D9827E')
         y = ttk.Scrollbar(pane,orient='vertical',command=table.yview)
         x = ttk.Scrollbar(pane,orient='horizontal',command=table.xview)
         table.configure(yscrollcommand=y.set,xscrollcommand=x.set)
@@ -279,10 +292,10 @@ class Dashboard(CatalogSearch):
             button.configure(style='Active.Nav.TButton' if key==index else 'Nav.TButton')
         if index==7:self.history_view.refresh()
         if index in (5,6,7):
-            self.market_filters.pack_forget()
+            self.filters_shell.pack_forget()
             self.export_status.pack_forget()
         else:
-            self.market_filters.pack(fill='x',pady=(4,8),before=self.notebook)
+            self.filters_shell.pack(fill='x',pady=(4,8),before=self.notebook)
             self.export_status.pack(anchor='w',pady=(0,8),before=self.notebook)
 
     def refresh(self):
@@ -459,7 +472,7 @@ class Dashboard(CatalogSearch):
         if variant is None:
             self.selected_margin.configure(text='')
             sync_table(self.city_compare,[])
-            canvas.create_text(20,30,anchor='nw',width=w-40,fill='#CFDCEC',font=('Segoe UI',12),
+            canvas.create_text(20,30,anchor='nw',width=w-40,fill='#D9CFB8',font=('Segoe UI',12),
                 text='Selecione um item para comparar.')
             return
         canvas.create_text(15,10,anchor='nw',width=w-30,fill='#FFFFFF',font=('Segoe UI',11,'bold'),
@@ -474,10 +487,10 @@ class Dashboard(CatalogSearch):
                 self.selected_margin.configure(text=f"Melhor margem estimada: {silver(margin['net'])} prata/un.\n"
                     f"{cities.get(margin['origin'],margin['origin'])} → {cities.get(margin['destination'],margin['destination'])} · Retorno sobre custo: {margin['roi']*100:.1f}%\n"
                     f"{self.profile.get()} · Imposto {self.tax.get()}% + transporte {self.transport.get()} prata/un.\n{volume} · Compra e venda imediatas, sem garantia de execução.",
-                    foreground='#8EDFC3' if margin['net']>0 else '#F0AAAA')
-            else:self.selected_margin.configure(text='Margem indisponível: faltam oferta de venda e pedido de compra recentes em cidades diferentes.',foreground='#A3B5CB')
+                    foreground='#D4AF37' if margin['net']>0 else '#D9827E')
+            else:self.selected_margin.configure(text='Margem indisponível: faltam oferta de venda e pedido de compra recentes em cidades diferentes.',foreground='#B3A78C')
         except ValueError:
-            self.selected_margin.configure(text='Margem indisponível: confira imposto e transporte.',foreground='#F0AAAA')
+            self.selected_margin.configure(text='Margem indisponível: confira imposto e transporte.',foreground='#D9827E')
         now=time.time();max_age=int(self.filters['minutes'].get())*60
         def cell(price):
             if not price:return '—','sem dado'
@@ -492,9 +505,9 @@ class Dashboard(CatalogSearch):
             has_fresh=any(p and now-p['seen']<=max_age for p in (sides.get('offer'),sides.get('request')))
             compare_rows.append((loc,(city,buy_price,buy_age,sell_price,sell_age),'fresh' if has_fresh else 'old'))
         sync_table(self.city_compare,compare_rows)
-        canvas.create_text(15,46,anchor='nw',fill='#6EADD4',font=('Segoe UI',9),text='Azul: comprar')
-        canvas.create_text(135,46,anchor='nw',fill='#74D3AB',font=('Segoe UI',9),text='Verde: vender')
-        canvas.create_text(15,62,anchor='nw',fill='#A5A1A0',font=('Segoe UI',9),width=w-30,
+        canvas.create_text(15,46,anchor='nw',fill='#5B8DB8',font=('Segoe UI',9),text='Azul: comprar')
+        canvas.create_text(135,46,anchor='nw',fill='#C9A227',font=('Segoe UI',9),text='Dourado: vender')
+        canvas.create_text(15,62,anchor='nw',fill='#8C8375',font=('Segoe UI',9),width=w-30,
                            text='Cinza: preço antigo, fora do limite de idade (*)')
         prices=[v['price'] for m in markets.values() for v in m.values()]
         maximum=max(prices,default=1)
@@ -502,19 +515,19 @@ class Dashboard(CatalogSearch):
         left=125;right=max(left+50,w-155)
         for i,(loc,city) in enumerate(CITIES):
             y=80+i*row_height
-            canvas.create_text(10,y+5,anchor='w',fill='#C5D5E7',font=('Segoe UI',9),text=city)
-            for j,(side,color) in enumerate([('offer','#6EADD4'),('request','#74D3AB')]):
+            canvas.create_text(10,y+5,anchor='w',fill='#D9CFB8',font=('Segoe UI',9),text=city)
+            for j,(side,color) in enumerate([('offer','#5B8DB8'),('request','#C9A227')]):
                 price=markets.get(loc,{}).get(side)
                 yy=y+j*11
                 if price:
                     old=time.time()-price['seen']>int(self.filters['minutes'].get())*60
-                    if old:color='#A5A1A0'
+                    if old:color='#8C8375'
                     length=(right-left)*price['price']/maximum
                     canvas.create_rectangle(left,yy,left+max(length,1),yy+8,fill=color,outline='')
                     canvas.create_text(right+7,yy+4,anchor='w',fill=color,font=('Segoe UI',8),
                         text=f"{silver(price['price'])} · {age_text(price['seen'],time.time())}{'*' if old else ''} {price.get('source','Fluxo')}")
                 else:
-                    canvas.create_text(right+7,yy+4,anchor='w',fill='#8295AD',font=('Segoe UI',8),text='sem dado')
+                    canvas.create_text(right+7,yy+4,anchor='w',fill='#8F8570',font=('Segoe UI',8),text='sem dado')
         self.request_history()
         self.draw_history_chart()
 
@@ -530,7 +543,7 @@ class Dashboard(CatalogSearch):
         w=max(canvas.winfo_width(),400);h=max(canvas.winfo_height(),240)
         if not self.selected_variant:
             self.history_status.configure(text='')
-            canvas.create_text(20,20,anchor='nw',width=w-40,fill='#CFDCEC',font=('Segoe UI',12),
+            canvas.create_text(20,20,anchor='nw',width=w-40,fill='#D9CFB8',font=('Segoe UI',12),
                 text='Selecione um item para ver o histórico.')
             return
         code,quality,enchant=self.selected_variant
@@ -541,7 +554,7 @@ class Dashboard(CatalogSearch):
         title=f"{self.catalog.item(code)} {code.split('_')[0]}.{enchant} · {city_name} · {PERIODS[period]['label']} · preço médio anunciado observado"
         canvas.create_text(15,8,anchor='nw',width=w-30,fill='#FFFFFF',font=('Segoe UI',10,'bold'),text=title)
         if not points:
-            canvas.create_text(15,40,anchor='nw',width=w-30,fill='#8295AD',font=('Segoe UI',11),
+            canvas.create_text(15,40,anchor='nw',width=w-30,fill='#8F8570',font=('Segoe UI',11),
                 text='Sem histórico de preço anunciado para este item/cidade/período.')
             return
         prices=[p['price'] for p in points]
@@ -551,19 +564,19 @@ class Dashboard(CatalogSearch):
         left,right,top,bottom=60,w-15,36,h-30
         def x_of(i):return left+(right-left)*i/max(1,len(points)-1)
         def y_of(price):return bottom-(bottom-top)*(price-lo)/(hi-lo)
-        canvas.create_text(left-6,top,anchor='ne',fill='#8295AD',font=('Segoe UI',8),text=silver(hi))
-        canvas.create_text(left-6,bottom,anchor='se',fill='#8295AD',font=('Segoe UI',8),text=silver(lo))
+        canvas.create_text(left-6,top,anchor='ne',fill='#8F8570',font=('Segoe UI',8),text=silver(hi))
+        canvas.create_text(left-6,bottom,anchor='se',fill='#8F8570',font=('Segoe UI',8),text=silver(lo))
         if len(points)>1:
             coords=[]
             for i,p in enumerate(points):coords.extend([x_of(i),y_of(p['price'])])
-            canvas.create_line(*coords,fill='#74D3AB',width=2)
+            canvas.create_line(*coords,fill='#C9A227',width=2)
         for i,p in enumerate(points):
-            canvas.create_oval(x_of(i)-2,y_of(p['price'])-2,x_of(i)+2,y_of(p['price'])+2,fill='#74D3AB',outline='')
+            canvas.create_oval(x_of(i)-2,y_of(p['price'])-2,x_of(i)+2,y_of(p['price'])+2,fill='#C9A227',outline='')
         date_format='%d/%m %Hh' if period in ('24h','3d') else '%d/%m'
         shown=sorted(set([0,len(points)//2,len(points)-1]))
         for i in shown:
             label=time.strftime(date_format,time.localtime(points[i]['seen']))
-            canvas.create_text(x_of(i),bottom+6,anchor='n',fill='#8295AD',font=('Segoe UI',8),text=label)
+            canvas.create_text(x_of(i),bottom+6,anchor='n',fill='#8F8570',font=('Segoe UI',8),text=label)
 
     def close(self):
         if self.calculators.production_planner is not None:self.calculators.production_planner.close()

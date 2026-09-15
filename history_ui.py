@@ -46,7 +46,7 @@ class HistoryView:
         self.tab = ttk.Frame(app.notebook, padding=12)
         app.notebook.add(self.tab, text='Histórico')
         ttk.Label(self.tab, text='Operações registradas por você nas calculadoras. Nada aqui é inferido do fluxo ou da API.',
-                  foreground='#A3B5CB', wraplength=1150).pack(anchor='w', pady=(0, 10))
+                  foreground='#B3A78C', wraplength=1150).pack(anchor='w', pady=(0, 10))
         cards = ttk.Frame(self.tab)
         cards.pack(fill='x', pady=(0, 10))
         self.metrics = {}
@@ -54,8 +54,8 @@ class HistoryView:
                             ('predicted', 'Lucro previsto total'), ('realized', 'Lucro realizado total')]:
             card = ttk.Frame(cards, padding=8)
             card.pack(side='left', fill='x', expand=True)
-            ttk.Label(card, text=label, foreground='#A3B5CB').pack(anchor='w')
-            number = ttk.Label(card, text='—', font=('Segoe UI', 16, 'bold'), foreground='#8EDFC3')
+            ttk.Label(card, text=label, foreground='#B3A78C').pack(anchor='w')
+            number = ttk.Label(card, text='—', font=('Segoe UI', 16, 'bold'), foreground='#D4AF37')
             number.pack(anchor='w')
             self.metrics[key] = number
         self.table = app.make_table(self.tab, None, [('Data', 135), ('Tipo', 75), ('Item', 250),
@@ -66,7 +66,7 @@ class HistoryView:
         ttk.Button(buttons, text='Remover', command=self.remove_selected).pack(side='left', padx=8)
         ttk.Button(buttons, text='Registrar várias operações', command=self.open_bulk_entry).pack(side='left', padx=8)
         ttk.Button(buttons, text='Atualizar', command=self.refresh).pack(side='left')
-        self.status = ttk.Label(self.tab, wraplength=1150, foreground='#A3B5CB')
+        self.status = ttk.Label(self.tab, wraplength=1150, foreground='#B3A78C')
         self.status.pack(anchor='w', pady=4)
         self.entries_by_id = {}
         self.refresh()
@@ -155,7 +155,7 @@ class HistoryView:
             var = tk.StringVar(value=default);modes[key] = var
             ttk.Combobox(row, textvariable=var, values=['Imediata', 'Ordem de compra' if key == 'buy_mode' else 'Ordem de venda'],
                          state='readonly').pack(side='left', fill='x', expand=True)
-        message = ttk.Label(frame, wraplength=380, foreground='#F0AAAA');message.pack(anchor='w', pady=6)
+        message = ttk.Label(frame, wraplength=380, foreground='#D9827E');message.pack(anchor='w', pady=6)
         def confirm():
             try:
                 result = flipping(buy=fields['buy'].get(), sell=fields['sell'].get(), quantity=fields['quantity'].get(),
@@ -191,7 +191,7 @@ class HistoryView:
             row = ttk.Frame(frame);row.pack(fill='x', pady=4)
             ttk.Label(row, text=label, width=22).pack(side='left')
             ttk.Entry(row, textvariable=var).pack(side='left', fill='x', expand=True)
-        message = ttk.Label(frame, wraplength=380, foreground='#F0AAAA');message.pack(anchor='w', pady=6)
+        message = ttk.Label(frame, wraplength=380, foreground='#D9827E');message.pack(anchor='w', pady=6)
         def confirm():
             try:
                 s = float(spent.get().replace(',', '.'));r = float(received.get().replace(',', '.'))
@@ -271,11 +271,11 @@ class HistoryView:
             self.refresh()
             if errors:
                 status.config(text=(f'{added} registrada(s). ' if added else 'Nada registrado. ')
-                    + 'Corrija: ' + ' | '.join(errors), foreground='#F0AAAA')
+                    + 'Corrija: ' + ' | '.join(errors), foreground='#D9827E')
             elif added:
-                status.config(text=f'{added} operação(ões) registrada(s) e confirmada(s).', foreground='#8EDFC3')
+                status.config(text=f'{added} operação(ões) registrada(s) e confirmada(s).', foreground='#D4AF37')
             else:
-                status.config(text='Nenhuma linha preenchida.', foreground='#A3B5CB')
+                status.config(text='Nenhuma linha preenchida.', foreground='#B3A78C')
         self.submit_bulk = submit  # acessível para testes de integração
         ttk.Button(frame, text='Registrar tudo', command=submit).pack(anchor='e', pady=4)
 
@@ -284,13 +284,13 @@ class HistoryView:
         tabs.add(tab, text=title)
         header = ttk.Frame(tab);header.pack(fill='x')
         for key, label, width, default in entry_specs:
-            ttk.Label(header, text=label, width=width, foreground='#A3B5CB').pack(side='left', padx=(0, 3))
+            ttk.Label(header, text=label, width=width, foreground='#B3A78C').pack(side='left', padx=(0, 3))
         for key, label, values, default in combo_specs:
-            ttk.Label(header, text=label, width=13, foreground='#A3B5CB').pack(side='left', padx=(0, 3))
+            ttk.Label(header, text=label, width=13, foreground='#B3A78C').pack(side='left', padx=(0, 3))
         rows = []
         entry_key_specs = [(k, w, d) for k, _, w, d in entry_specs]
         combo_key_specs = [(k, v, d) for k, _, v, d in combo_specs]
-        canvas = tk.Canvas(tab, highlightthickness=0, background='#101B2B')
+        canvas = tk.Canvas(tab, highlightthickness=0, background='#171310')
         scrollbar = ttk.Scrollbar(tab, orient='vertical', command=canvas.yview)
         canvas.configure(yscrollcommand=scrollbar.set)
         add_button = ttk.Button(tab, text='+ linha', command=lambda: self._add_bulk_row(rows, rows_frame, entry_key_specs, combo_key_specs))

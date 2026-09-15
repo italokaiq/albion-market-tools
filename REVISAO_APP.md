@@ -1,3 +1,23 @@
+# Revisão do aplicativo — 15/09/2026 (parte 10)
+
+## Redimensionamento e paleta de cores do jogo
+
+Pedido do usuário: o app não pode quebrar ao redimensionar, e o visual deveria lembrar o jogo.
+
+**Redimensionamento.** Medido antes de mexer: a barra de filtros principal (nome/código, cidade, idade máxima) já precisa de ~939px de largura sozinha, sem nenhuma forma de rolar — abaixo de ~1130px de largura total de janela, campos ficavam simplesmente inacessíveis, sem aviso. Isso provavelmente motivou o `minsize(1100,740)` original, que por sua vez já deixava pouca margem em telas de notebook comuns (1366×768). Corrigido: a barra de filtros agora vive dentro de um canvas com rolagem horizontal automática — abaixo da largura necessária, aparece uma barra de rolagem; acima, ela fica oculta. `minsize` reduzido para `(1000,650)`. Testado programaticamente em 1920×1080, 1366×768, 1100×740, 1000×650 e 900×600 (abaixo do mínimo, onde o Tk trava no mínimo): em nenhum caso um controle fica inacessível.
+
+**Paleta de cores.** Pesquisei antes de aplicar — não inventei valores. Achado real (não é a convenção "WoW" que eu presumiria por padrão): qualidade no Albion usa cor **metálica** (pedra/ferro/bronze/prata/ouro), encantamento usa **verde/azul/roxo/amarelo** em sistema de losangos, e tier usa **cinza/bronzeado/verde/azul/vermelho/laranja/amarelo/branco** — com hex reais extraídos de screenshots pela comunidade para os tiers 3–7 (ex.: tier 5 vermelho `#6F2019`/`#934038`, tier 7 dourado `#C8A940`/`#E8C95F`). O tema atual (fundo azul-marinho `#101B2B`, destaque verde-menta `#8EDFC3`) não tinha nada a ver com isso.
+
+- Fundo trocado de azul-marinho para carvão/marrom escuro (`#171310`/`#221D17`/`#2C2418`).
+- Destaque trocado de verde-menta para dourado/bronze (`#D4AF37` acento principal, `#6B4F23`/`#4A3820` seleção/estado ativo).
+- Texto trocado de branco-azulado para branco-pergaminho quente (`#EDE6D6`/`#B3A78C`/`#8F8570`).
+- Barra "vender" do gráfico trocada de verde para dourada — **e corrigi o texto da legenda que ainda dizia "Verde: vender"** depois da troca de cor (achado revisando o próprio diff, antes de rodar qualquer teste — o tipo de inconsistência que só aparece olhando o resultado, não testando isoladamente).
+- Aplicado de forma sistemática (mapa cor-antiga → cor-nova, script único) em `dashboard.py`, `calculators.py`, `production_ui.py`, `history_ui.py`, `ui_design.py` — 96 substituições ao todo, sem nenhuma cor antiga sobrando (conferido por busca).
+
+**Limite real, não escondido**: não tenho como ver a janela renderizada neste ambiente. Validei o que dá para validar sem olhos — compilação, nenhum erro de cor inválida do Tcl/Tk ao navegar por todas as 8 abas e todos os diálogos (busca, craft, planejador, biblioteca de receitas, histórico, registro em lote), suíte completa passando. Se alguma cor ficar ruim visualmente (contraste, combinação estranha), só o usuário consegue ver e apontar o quê exatamente ajustar.
+
+Validação: 167 testes passaram (nenhum teste verifica cor específica — é comportamento puramente visual).
+
 # Revisão do aplicativo — 15/09/2026 (parte 9)
 
 ## Registro em lote no histórico

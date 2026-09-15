@@ -34,7 +34,7 @@ class Calculators(CraftPrices):
         app.notebook.add(self.flip,text='Calculadora de flipping')
         shell=ttk.Frame(app.notebook)
         app.notebook.add(shell,text='Calculadora de craft')
-        canvas=tk.Canvas(shell,highlightthickness=0,background='#101B2B')
+        canvas=tk.Canvas(shell,highlightthickness=0,background='#171310')
         scrollbar=ttk.Scrollbar(shell,orient='vertical',command=canvas.yview)
         canvas.configure(yscrollcommand=scrollbar.set)
         scrollbar.pack(side='right',fill='y');canvas.pack(side='left',fill='both',expand=True)
@@ -51,7 +51,7 @@ class Calculators(CraftPrices):
         for index,(key,label,default,options) in enumerate(specs):
             block=ttk.Frame(line,padding=(0,0,16,0))
             block.grid(row=0,column=index,sticky='ew');line.columnconfigure(index,weight=1,uniform='field')
-            ttk.Label(block,text=label,foreground='#A3B5CB').pack(anchor='w',pady=(0,5))
+            ttk.Label(block,text=label,foreground='#B3A78C').pack(anchor='w',pady=(0,5))
             v=tk.StringVar(value=default);target[key]=v
             if options:
                 widget=ttk.Combobox(line,textvariable=v,values=options,state='readonly',width=18)
@@ -60,7 +60,7 @@ class Calculators(CraftPrices):
             widget.pack(in_=block,fill='x')
 
     def make_flip(self):
-        ttk.Label(self.flip,text='Calcule a operação antes de comprar.',font=('Segoe UI',12),foreground='#A3B5CB').pack(anchor='w',pady=(0,12))
+        ttk.Label(self.flip,text='Calcule a operação antes de comprar.',font=('Segoe UI',12),foreground='#B3A78C').pack(anchor='w',pady=(0,12))
         self.fields(self.flip,self.flip_fields,[('buy','Compra/un.','',None),('sell','Venda/un.','',None),('quantity','Quantidade','1',None)])
         self.fields(self.flip,self.flip_fields,[('buy_mode','Comprar','Imediata',['Imediata','Ordem de compra']),('sell_mode','Vender','Imediata',['Imediata','Ordem de venda'])])
         advanced=disclosure(self.flip,'Transporte e recriação de ordens')
@@ -81,11 +81,11 @@ class Calculators(CraftPrices):
 
     def make_craft(self):
         ttk.Label(self.craft,text='1  Escolha o equipamento     →     2  Consulte preços e confirme custos     →     3  Compare cidades',
-                  wraplength=1050,font=('Segoe UI',11,'bold'),foreground='#8EDFC3').pack(anchor='w',pady=(0,12))
+                  wraplength=1050,font=('Segoe UI',11,'bold'),foreground='#D4AF37').pack(anchor='w',pady=(0,12))
         chooser=ttk.Frame(self.craft);chooser.pack(fill='x',pady=(0,10))
         ttk.Button(chooser,text='Escolher equipamento pelo nome',command=self.choose_equipment).pack(side='left')
         ttk.Button(chooser,text='Comparar compra, refino e cidades',command=self.open_production_planner).pack(side='left',padx=8)
-        self.recipe_title=ttk.Label(chooser,text='Selecione para preencher a receita.',foreground='#A3B5CB',wraplength=650)
+        self.recipe_title=ttk.Label(chooser,text='Selecione para preencher a receita.',foreground='#B3A78C',wraplength=650)
         self.recipe_title.pack(side='left',padx=12)
         self.alternative=tk.StringVar(value='Receita 1')
         self.recipe_options=ttk.Combobox(self.craft,textvariable=self.alternative,state='readonly',width=45)
@@ -107,7 +107,7 @@ class Calculators(CraftPrices):
             ttk.Button(buttons,text=label,command=callback).pack(side='left',padx=(0,8))
         self.craft_note=ttk.Label(self.craft,text='Informe a receita do jogo. Preços ausentes bloqueiam o cálculo; não são tratados como zero.',wraplength=1180)
         self.craft_note.pack(anchor='w')
-        self.price_status=ttk.Label(self.craft,text='Preços digitados manualmente são informados por você, não verificados pelo app.',wraplength=1000,foreground='#A3B5CB')
+        self.price_status=ttk.Label(self.craft,text='Preços digitados manualmente são informados por você, não verificados pelo app.',wraplength=1000,foreground='#B3A78C')
         self.price_status.pack(anchor='w',pady=4)
         self.craft_result=ttk.Label(self.craft,text='',wraplength=1180,font=('Segoe UI',11))
         self.craft_result.pack(anchor='w',pady=5)
@@ -121,7 +121,7 @@ class Calculators(CraftPrices):
 
     def add_material(self):
         outer=ttk.Frame(self.material_container);outer.pack(fill='x',pady=3)
-        name=ttk.Label(outer,text='',foreground='#A3B5CB');name.pack(anchor='w')
+        name=ttk.Label(outer,text='',foreground='#B3A78C');name.pack(anchor='w')
         row=ttk.Frame(outer);row.pack(fill='x')
         fields={}
         for key,label,width,default in [('code','Código',28,''),('quantity','Qtd/craft',10,'1'),('price','Prata/un.',12,'')]:
@@ -145,7 +145,7 @@ class Calculators(CraftPrices):
         query=tk.StringVar()
         entry=ttk.Entry(frame,textvariable=query);entry.pack(fill='x',pady=10);entry.focus_set()
         panel=ttk.Frame(frame);panel.pack(fill='both',expand=True)
-        listing=tk.Listbox(panel,background='#16263A',foreground='#DFEAF7',selectbackground='#315775',font=('Segoe UI',11),exportselection=False)
+        listing=tk.Listbox(panel,background='#221D17',foreground='#EDE6D6',selectbackground='#6B4F23',font=('Segoe UI',11),exportselection=False)
         bar=ttk.Scrollbar(panel,command=listing.yview);listing.configure(yscrollcommand=bar.set)
         listing.pack(side='left',fill='both',expand=True);bar.pack(side='right',fill='y')
         status=ttk.Label(frame);status.pack(anchor='w',pady=8)
