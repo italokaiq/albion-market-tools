@@ -1,3 +1,16 @@
+# Revisão do aplicativo — 15/09/2026 (parte 5)
+
+## Biblioteca de receitas salvas
+
+Último item da lista de limitações originais ("gestão de várias receitas salvas... O arquivo da receita atual não é uma biblioteca") resolvido.
+
+- `recipe_library.py`: mesmo padrão de `production_profiles.py`/`history.py` — versionado, gravação atômica com backup, nomes até 80 caracteres, renomear rejeita nome duplicado.
+- **Salvar receita como...** (pede um nome) e **Minhas receitas** (lista, carrega, renomeia, remove) substituem os antigos botões de slot único "Salvar receita"/"Carregar receita".
+- Migração automática e não-destrutiva: se existir uma `receita_craft.json` do formato antigo, ela é importada para a biblioteca (nomeada pelo item do produto) na primeira vez que **Minhas receitas** é aberto, e o arquivo antigo é renomeado para `.json.migrated` (preservado, não apagado).
+- **Bug real encontrado e corrigido durante o desenvolvimento**: a primeira versão chamava a migração no construtor de `Calculators`, então rodar a suíte de testes migrou silenciosamente o `receita_craft.json` real do usuário (o resultado ficou correto — nada foi perdido — mas o efeito colateral em arquivo real ao simplesmente construir um objeto era um bug sério). Corrigido movendo a migração para dentro de `open_recipe_library()`, chamada apenas quando o usuário abre a tela de verdade. Adicionado teste de regressão (`test_construction_never_calls_migration`) que trava esse comportamento. Verificado manualmente (hash MD5 antes/depois) que rodar a suíte completa não altera mais nenhum arquivo real do usuário.
+
+Validação: 125 testes passaram.
+
 # Revisão do aplicativo — 15/09/2026 (parte 4)
 
 ## Executável autônomo (.exe real)

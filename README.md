@@ -48,7 +48,7 @@ Informe o custo total de uso da estação em prata (não a tarifa por 100 de nut
 
 O custo econômico desconta o valor esperado dos recursos retornados, pelo mesmo preço dos insumos, e pode incluir custo do Foco. O saldo em prata após vender o produto não inclui venda dos recursos devolvidos nem considera Foco como despesa em dinheiro. A diferença é mostrada para distinguir estoque retornado de prata realizada. A quantidade de produção é `crafts × itens/craft`; não se presume recrafting dos recursos retornados nem uma qualidade aleatória melhor que a informada.
 
-**Salvar receita** guarda a receita atual em `receita_craft.json`; **Carregar receita** restaura os campos e limpa preços, retorno e estação, para informar valores atuais. As contas são estimativas percentuais: arredondamentos, tarifas mínimas do jogo, ordens parcialmente preenchidas, custos adicionais de relistagem do craft e mudanças de preço precisam ser conferidos antes de executar.
+**Salvar receita como...** guarda a receita atual na biblioteca (`receitas_salvas.json`), com o nome que você escolher; **Minhas receitas** lista, carrega, renomeia e remove receitas salvas. Carregar restaura os campos e limpa preços, retorno e estação, para informar valores atuais. As contas são estimativas percentuais: arredondamentos, tarifas mínimas do jogo, ordens parcialmente preenchidas, custos adicionais de relistagem do craft e mudanças de preço precisam ser conferidos antes de executar.
 
 Referências de regras consultadas em 14/09/2026:
 
@@ -162,6 +162,12 @@ A nova aba **Histórico** lista as operações registradas, com um resumo (opera
 Operações sem confirmação aparecem como "Prevista, sem confirmação"; é possível remover uma entrada registrada por engano. O arquivo de histórico é local e pessoal — está no `.gitignore`, como `preferencias.json` e `perfis_producao.json`.
 
 Validação: 102 testes passaram, incluindo gravação/confirmação/remoção do histórico, rejeição de registro com dados inválidos e a tela de histórico.
+
+## Biblioteca de receitas — 15/09/2026
+
+**Salvar receita como...** e **Minhas receitas** (na Calculadora de craft) substituem o antigo slot único: agora dá para guardar várias receitas com nome próprio, carregar, renomear ou remover cada uma pela lista. Ficam em `receitas_salvas.json`, sem preços salvos junto. Se você já tinha uma receita no formato antigo (`receita_craft.json`), ela é importada automaticamente na primeira vez que abrir **Minhas receitas**, com o nome do equipamento; o arquivo antigo não é apagado, só renomeado para `.json.migrated`.
+
+Validação: 125 testes passaram.
 
 ## Perfis, recuperação e diagnóstico
 

@@ -6,6 +6,8 @@ preferencias.json
 receita_craft.json
 perfis_producao.json
 historico.json
+receitas_salvas.json
+*.json.migrated
 *.json.bak
 logs/
 build/

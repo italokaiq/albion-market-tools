@@ -1,12 +1,13 @@
 import json
 import time
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, simpledialog
 from economics import flipping, crafting
 from trading import CITIES, selected_item_margin
 from ui_design import disclosure,result_table,fill_results
 from craft_prices import CraftPrices
 from history import History
+from recipe_library import RecipeLibrary
 from paths import data_path
 
 
@@ -19,6 +20,7 @@ class Calculators(CraftPrices):
         self.app=app
         self.saved=data_path('receita_craft.json')
         self.history=History()
+        self.library=RecipeLibrary()
         self.flip_fields={}
         self.craft_fields={}
         self.materials=[]
@@ -101,7 +103,7 @@ class Calculators(CraftPrices):
         ttk.Label(materials,text='Materiais por craft',font=('Segoe UI',12,'bold')).pack(anchor='w',pady=(8,6))
         self.add_material()
         buttons=ttk.Frame(self.craft);buttons.pack(fill='x',pady=4)
-        for label,callback in [('Adicionar material',self.add_material),('Buscar preços recentes',self.load_prices),('Salvar receita',self.save_recipe),('Carregar receita',self.load_recipe),('Registrar operação',self.record_craft)]:
+        for label,callback in [('Adicionar material',self.add_material),('Buscar preços recentes',self.load_prices),('Salvar receita como...',self.save_recipe_as),('Minhas receitas',self.open_recipe_library),('Registrar operação',self.record_craft)]:
             ttk.Button(buttons,text=label,command=callback).pack(side='left',padx=(0,8))
         self.craft_note=ttk.Label(self.craft,text='Informe a receita do jogo. Preços ausentes bloqueiam o cálculo; não são tratados como zero.',wraplength=1180)
         self.craft_note.pack(anchor='w')
@@ -271,33 +273,96 @@ class Calculators(CraftPrices):
         self.flip_note.config(text=f'Operação registrada no histórico às {time.strftime("%H:%M:%S")}. '
             f'Lucro previsto: {money(result["net"])} prata. Confirme a execução depois em Histórico.')
 
-    def save_recipe(self):
-        data=dict(fields={k:v.get() for k,v in self.craft_fields.items()},materials=[{k:v.get() for k,v in m.items()} for _,m in self.materials])
-        try:
-            from persistence import write_settings
-            write_settings(self.saved,data)
-            self.craft_note.config(text='Receita salva neste computador. Ao carregar, busque os preços novamente.')
-        except OSError as e:self.craft_note.config(text=str(e))
-
-    def load_recipe(self):
+    def migrate_legacy_recipe(self):
+        """Importa a única receita salva no formato antigo (uma por vez) para a biblioteca, uma vez só."""
+        if not self.saved.exists():return
         try:
             data=json.loads(self.saved.read_text(encoding='utf-8'))
-            for k,v in data['fields'].items():
-                if k in self.craft_fields:self.craft_fields[k].set(v)
-            for row,m in list(self.materials):self.remove_material(row,m)
-            for m in data['materials']:
-                self.add_material()
-                for k,v in m.items():
-                    if k in self.materials[-1][1]:self.materials[-1][1][k].set(v)
-                self.materials[-1][1]['price'].set('')
-            self.craft_fields['sell'].set('')
-            self.craft_fields['station'].set('')
-            self.craft_fields['rrr'].set('')
-            self.recipe_code=None
-            self.recipe_options.pack_forget()
-            self.recipe_title.configure(text='Receita salva: '+self.app.catalog.item(self.craft_fields['code'].get()))
-            self.craft_note.config(text='Receita carregada. Busque ou informe os preços atuais.')
-        except (OSError,ValueError,KeyError,TypeError) as e:self.craft_note.config(text='Não foi possível carregar: '+str(e))
+            product=data.get('fields',{}).get('code','').strip()
+            base_name=self.app.catalog.item(product) if product else 'Receita importada'
+            existing=self.library.read()['recipes']
+            name=base_name;n=2
+            while name in existing:name=f'{base_name} ({n})';n+=1
+            self.library.save(name,data['fields'],data['materials'])
+            self.saved.rename(self.saved.with_suffix('.json.migrated'))
+        except (OSError,ValueError,KeyError,TypeError):
+            pass
+
+    def save_recipe_as(self):
+        default=self.app.catalog.item(self.craft_fields['code'].get()) if self.craft_fields['code'].get().strip() else ''
+        name=simpledialog.askstring('Salvar receita','Nome para esta receita:',initialvalue=default,parent=self.app.root)
+        if not name:return
+        fields={k:v.get() for k,v in self.craft_fields.items()}
+        materials=[{k:v.get() for k,v in m.items()} for _,m in self.materials]
+        try:
+            self.library.save(name,fields,materials)
+            self.craft_note.config(text=f'Receita "{name}" salva na biblioteca. Preços não são salvos.')
+        except (OSError,ValueError) as e:
+            self.craft_note.config(text='Não foi possível salvar: '+str(e))
+
+    def apply_saved_recipe(self,name):
+        recipe=self.library.load(name)
+        for k,v in recipe['fields'].items():
+            if k in self.craft_fields:self.craft_fields[k].set(v)
+        for row,m in list(self.materials):self.remove_material(row,m)
+        for m in recipe['materials']:
+            self.add_material()
+            for k,v in m.items():
+                if k in self.materials[-1][1]:self.materials[-1][1][k].set(v)
+            self.materials[-1][1]['price'].set('')
+        self.craft_fields['sell'].set('')
+        self.craft_fields['station'].set('')
+        self.craft_fields['rrr'].set('')
+        self.recipe_code=None
+        self.recipe_options.pack_forget()
+        self.recipe_title.configure(text=f'Receita salva "{name}": '+self.app.catalog.item(self.craft_fields['code'].get()))
+        self.craft_note.config(text='Receita carregada. Busque ou informe os preços atuais.')
+
+    def open_recipe_library(self):
+        self.migrate_legacy_recipe()
+        dialog=tk.Toplevel(self.app.root);dialog.title('Minhas receitas salvas');dialog.geometry('640x440')
+        dialog.transient(self.app.root)
+        frame=ttk.Frame(dialog,padding=16);frame.pack(fill='both',expand=True)
+        ttk.Label(frame,text='Receitas salvas neste computador. Preços não são salvos; busque-os novamente ao carregar.',
+                  wraplength=600).pack(anchor='w')
+        table=self.app.make_table(frame,None,[('Nome',230),('Produto',230),('Salva em',140)])
+        status=ttk.Label(frame,wraplength=600);status.pack(anchor='w',pady=6)
+        def refresh():
+            try:recipes=self.library.read()['recipes']
+            except (OSError,ValueError) as e:status.config(text=str(e));return
+            rows=[]
+            for name,r in sorted(recipes.items()):
+                product=r.get('fields',{}).get('code','')
+                label=self.app.catalog.item(product) if product else '—'
+                when=r.get('saved_at','')[:16].replace('T',' ')
+                rows.append((name,(name,label,when),'fresh'))
+            from market_view import sync_table
+            sync_table(table,rows)
+            status.config(text=f'{len(recipes)} receita(s) salva(s).' if recipes else 'Nenhuma receita salva ainda.')
+        def load_selected():
+            selection=table.selection()
+            if not selection:return
+            try:
+                self.apply_saved_recipe(selection[0]);dialog.destroy()
+            except (OSError,ValueError,KeyError) as e:status.config(text=str(e))
+        def rename_selected():
+            selection=table.selection()
+            if not selection:return
+            new_name=simpledialog.askstring('Renomear receita','Novo nome:',initialvalue=selection[0],parent=dialog)
+            if not new_name:return
+            try:self.library.rename(selection[0],new_name);refresh()
+            except (OSError,ValueError,KeyError) as e:status.config(text=str(e))
+        def delete_selected():
+            selection=table.selection()
+            if not selection:return
+            try:self.library.delete(selection[0]);refresh()
+            except (OSError,ValueError,KeyError) as e:status.config(text=str(e))
+        buttons=ttk.Frame(frame);buttons.pack(fill='x',pady=8)
+        ttk.Button(buttons,text='Carregar',command=load_selected).pack(side='left')
+        ttk.Button(buttons,text='Renomear',command=rename_selected).pack(side='left',padx=8)
+        ttk.Button(buttons,text='Remover',command=delete_selected).pack(side='left')
+        table.bind('<Double-1>',lambda e:load_selected())
+        refresh()
 
     def record_craft(self):
         """Registra a operação de craft calculada no histórico, com os mesmos valores usados no cálculo exibido."""
