@@ -290,3 +290,15 @@ Validação: 208 testes passaram (4 novos para `app_update.py`, mais os já exis
 O verificador de atualização também revelou uma limitação real: a API pública do GitHub retorna 404 para releases de repositório **privado** (era o caso aqui), então o checador nunca conseguiria enxergar uma release de verdade enquanto assim ficasse. Perguntado, você decidiu tornar o repositório **público** — conferido o histórico do git antes (nenhum segredo, credencial ou dado de usuário jamais foi commitado; tudo isso sempre ficou de fora via `.gitignore`) para confirmar que era seguro. Criada a release `v1.0.0` de verdade no GitHub com o `.exe` anexado, e reconfirmado contra a API real depois de tornar público: `update_available: False` (versão local bate com a release).
 
 Validação final: 216 testes passaram no total.
+
+## QA visual por captura de tela — 16/09/2026
+
+A limitação registrada em toda revisão anterior ("não dá pra ver a janela renderizada") foi resolvida: a tentativa anterior de screenshot (por coordenadas de tela) tinha capturado a tela real do usuário por engano (apagado na hora, sem análise — ver seção de revisão geral). Desta vez, capturado via `PrintWindow` do Windows (renderiza direto do identificador da janela, não lê pixels da tela — imune ao problema anterior), confirmando antes que existia exatamente uma janela com aquele título exato.
+
+**Resultado**: a paleta dourado/carvão aplicada numa revisão anterior está coerente e legível nas 4 telas conferidas (Visão geral, Simular flipping, Planejar craft, Flip de upgrade de encantamento) — tabelas, abas, campos, botões e o destaque da linha de lucro no resultado do flip todos com bom contraste.
+
+**Bug real encontrado e corrigido**: os rótulos "Explorar equipamentos" e "Operações registradas" no menu lateral apareciam cortados ("Explorar equipamen…") — a largura fixa do menu (185px) é menor que o texto desses dois rótulos, os únicos entre os seis que não cabiam. Medido o espaço real disponível e o tamanho de cada rótulo com a fonte real do app antes de escolher a correção (não só encurtado no achismo): renomeados para "Ver equipamentos" e "Ver operações", confirmados por medição que cabem com folga, e reconfirmado visualmente com um novo screenshot que os dois aparecem completos agora.
+
+Achado menor, não corrigido: o indicador do checkbox "Retorna" (calculadora de craft) usa o visual padrão do tema `clam` em vez da paleta customizada do app — funciona bem, só destoa um pouco visualmente. Baixa prioridade.
+
+Validação: 216 testes passaram (nenhum teste novo — mudança é só o texto de dois rótulos, já coberta pela suíte existente por não quebrar nada).

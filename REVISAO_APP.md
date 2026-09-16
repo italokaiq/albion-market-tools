@@ -1,3 +1,17 @@
+# Revisão do aplicativo — 16/09/2026 (parte 16)
+
+## QA visual por captura de tela, de verdade desta vez
+
+Pedido direto do usuário: "vamos para o QA visual por screenshot", depois da tentativa anterior ter falhado (capturou a tela real por engano). Troquei a técnica: em vez de `CopyFromScreen` sobre as coordenadas de `GetWindowRect` (lê pixels da tela, dependente de qual monitor/sessão está sendo lido), usei `PrintWindow` do `user32.dll` com a flag `PW_RENDERFULLCONTENT` — pede pra janela se desenhar direto num HDC que eu forneço, sem depender de qual conteúdo está fisicamente na tela naquele momento. Antes de capturar, sempre confirmei que existia exatamente 1 janela com aquele título exato (`Get-Process | Where MainWindowTitle -eq`), e para as janelas secundárias (o planejador de flip de upgrade, um `Toplevel`) precisei de `EnumWindows` porque `MainWindowTitle` só reporta a janela raiz do processo, não os `Toplevel` filhos — outra coisa aprendida nesta sessão sobre automação de janelas do Windows.
+
+Capturei 4 telas com dados reais carregados (T4_MAIN_SWORD selecionado, contexto do banco real): Visão geral, Simular flipping (com resultado calculado), Planejar craft (com receita e materiais carregados) e o planejador de flip de upgrade (tela nova, nunca vista visualmente antes). A paleta dourado/carvão está coerente em todas — contraste bom em texto, tabelas, abas selecionadas/não selecionadas, e o destaque de lucro/prejuízo na tabela de resultado.
+
+**Achado real, corrigido**: dois rótulos do menu lateral apareciam cortados — "Explorar equipamentos" (`Explorar equipamen…`) e "Operações registradas" (`Operações registrad…`). Medido com a fonte real do app (`tkinter.font.Font(family='Segoe UI', size=10).measure(...)`) contra a largura real disponível no botão (criando um `ttk.Button` de verdade com o mesmo estilo, não só calculando por padding teórico): 136px e 152px de texto contra ~149px disponíveis — os únicos dois rótulos que não cabiam entre os seis do menu. Troquei para "Ver equipamentos" (132px) e "Ver operações" (110px), medidos como cabendo com folga antes de aplicar, e reconfirmado com um novo screenshot depois da mudança que os dois aparecem completos.
+
+Achado secundário, não corrigido (baixa prioridade): o indicador do `Checkbutton` "Retorna" na calculadora de craft usa as cores padrão do tema `clam` (nunca foi incluído na troca de paleta de uma revisão anterior) — funciona, só destoa visualmente um pouco do resto.
+
+Validação: 216 testes passaram (mudança é só texto de rótulo, sem teste novo necessário).
+
 # Revisão do aplicativo — 16/09/2026 (parte 15)
 
 ## Quatro melhorias pendentes: catálogo, DPI/teclado, atualização e instalador

@@ -227,10 +227,10 @@ class Dashboard(CatalogSearch):
         self.history_view = HistoryView(self)
         self.nav_buttons={}
         pages=list(notebook.tabs())
-        labels=[('MERCADO',[(0,'Explorar equipamentos')]),
+        labels=[('MERCADO',[(0,'Ver equipamentos')]),
                 ('FLIPPING',[(2,'Encontrar rotas'),(5,'Simular operação')]),
                 ('PRODUÇÃO',[(6,'Planejar craft')]),
-                ('HISTÓRICO',[(7,'Operações registradas')])]
+                ('HISTÓRICO',[(7,'Ver operações')])]
         self.page_names={0:'Oportunidades de flipping',2:'Rotas de compra e venda',5:'Simular flipping',
                          6:'Planejar craft',1:'Preços por cidade',4:'Comparar preços',3:'Ordens coletadas',
                          7:'Histórico de operações'}
