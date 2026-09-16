@@ -11,6 +11,8 @@ python -m PyInstaller --onefile --name AlbionMercadoAmericas --noconfirm ^
   --add-data "recipes.json;." ^
   --add-data "recipes_source.json;." ^
   --add-data "market_items.json;." ^
+  --add-data "upgrade_costs.json;." ^
+  --add-data "VERSION;." ^
   launcher.py
 if errorlevel 1 goto fail
 

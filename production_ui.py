@@ -10,6 +10,7 @@ from production import refining_recipes,dependency_codes,plan_production,PRODUCT
 from trading import CITIES
 from calculators import money
 from production_profiles import ProductionProfiles
+from ui_design import close_on_escape
 
 class ProductionPlanner:
     def __init__(self,calculator):
@@ -47,7 +48,7 @@ class ProductionPlanner:
         self.codes=dependency_codes(self.materials,self.recipes)|{self.product}
         self.window=tk.Toplevel(self.app.root);self.window.title('Planejar compra, refino, craft e venda');self.window.geometry('1150x800')
         self.window.minsize(1000,720)
-        self.window.protocol('WM_DELETE_WINDOW',self.close)
+        self.window.protocol('WM_DELETE_WINDOW',self.close);close_on_escape(self.window,self.close)
         frame=ttk.Frame(self.window,padding=14);frame.pack(fill='both',expand=True)
         title=f"{self.app.catalog.item(self.product)} · {self.f['crafts']} crafts · Qualidade {self.f['quality']} · {self.app.profile.get()}"
         ttk.Label(frame,text=title,font=('Segoe UI',13,'bold')).pack(anchor='w')

@@ -253,3 +253,34 @@ Pedido do usuário: revisar o app todo em busca de bugs e erros de execução. A
 **Bug real encontrado e corrigido**: `Calculators.use_route()` (usado pelo botão "Usar rota selecionada" na calculadora de flipping) travava sem nenhum aviso se o campo "Transporte por un." do painel principal estivesse vazio ou com texto não numérico — `float()` era chamado diretamente, sem o mesmo tratamento de erro já usado em todo o resto do app (ex.: `dashboard.refresh()`, `draw_chart()`, `use_reference_margin()`, que tratam esse mesmo tipo de entrada inválida com uma mensagem clara em vez de travar). Reproduzido de propósito (rota real selecionada + campo de transporte inválido) antes de corrigir, para confirmar que era alcançável e não só teórico. Corrigido: agora captura o erro, usa 0 como transporte só para essa cópia da rota e avisa explicitamente no texto da operação para o usuário corrigir o campo — nunca falha silenciosamente nem trava.
 
 Validação: 198 testes passaram (2 novos, incluindo a reprodução exata do travamento antes da correção).
+
+## Catálogo: remove itens não negociáveis, inclui itens de inventário negociáveis — 16/09/2026
+
+Pedido do usuário para seguir melhorando o app. Os dados-fonte (`recipes_source.json`) têm um atributo `@tradable` explícito por item, que o catálogo nunca tinha usado. Achado real, verificado contra a API antes de mudar: **100 itens já incluídos aqui tinham `@tradable="false"`** — banners de guildhall, itens internos de "game master", tokens de arena, caixas de recompensa com sufixo `_PH` de placeholder — e nunca aparecem com preço; poluíam a busca com resultados que nunca têm dado. Testado numa amostra contra a API real: todos com zero preços em qualquer cidade, confirmando que a exclusão é segura.
+
+Comparado também contra a categoria "Hardcore Expeditions" da Albion Free Market (181 itens): já estavam **todos** cobertos via `simpleitem`, sem mudança necessária — a lacuna anotada numa revisão anterior estava desatualizada.
+
+`consumablefrominventoryitem` (1.362 itens — livros de habilidade, poções, desbloqueios de vaidade, cargas de emote — majoritariamente pessoais/não negociáveis) tinha ficado de fora do catálogo por completo. Em vez de adivinhar quais entram, usado o mesmo atributo `@tradable`: só os **48 marcados `@tradable="true"` explicitamente** entram (livros de habilidade de coleta, poção de foco, pó de reparo, cargas de emote de kill, alguns desbloqueios de vaidade de arena) — confirmado com preço real observado numa amostra (5 de 6 tinham oferta ativa no momento do teste) antes de incluir.
+
+Catálogo: de 10.208 para **10.156** códigos pesquisáveis (100 removidos, 48 adicionados).
+
+Validação: 200 testes passaram (2 novos), catálogo regenerado a partir da fonte real.
+
+## DPI de tela e fechar diálogos com Esc — 16/09/2026
+
+Duas lacunas de acessibilidade/QA identificadas e corrigidas:
+
+- **Alta densidade de tela (DPI)**: sem declarar o processo como ciente de DPI, o Windows trata a janela como legada e a estica em bitmap nas telas de alta densidade — tudo fica borrado. `launcher.py` agora chama `SetProcessDpiAwareness` (com fallback pra `SetProcessDPIAware` em versões mais antigas do Windows) antes do primeiro `tk.Tk()`, e ajusta a escala interna do Tk (`tk scaling`) para o fator real do monitor logo depois. Nunca falha o app se a API não existir (fora do Windows, por exemplo) — só fica sem o ajuste. **Não verificado visualmente contra um monitor de alta densidade de verdade** (mesma limitação já registrada para a paleta de cores); testado que não trava em execução normal e que a chamada de escala produz um número positivo e plausível.
+- **Esc não fechava nenhuma tela**: nenhum dos 9 diálogos do app (escolher item, escolher equipamento, minhas receitas, confirmar operação no histórico, registro em lote, planejador de produção, flip de upgrade e seu sub-diálogo de escolha) respondia a Esc — só dava pra fechar clicando no X. Adicionado `close_on_escape()` em `ui_design.py` e aplicado nos 9. Testado que a tecla realmente fecha cada diálogo (não só que a função existe): fora dos casos onde a janela real do app está visível (não dá pra simular Esc de forma confiável numa janela `.transient()` de um `root` escondido usado nos testes automatizados — peculiaridade conhecida do Tk/Windows, sem relação com o app em si), a lógica foi testada isoladamente com uma janela visível de verdade.
+
+Validação: 204 testes passaram (4 novos).
+
+## Verificação de atualização do programa e instalador — 16/09/2026
+
+Dois itens que faltavam desde o executável autônomo: saber se há uma versão mais nova, e instalar/desinstalar sem copiar arquivo manualmente.
+
+- **`VERSION`** (novo arquivo, `1.0.0` — primeira versão numerada deste projeto) e **`app_update.py`**: consulta a API pública do GitHub (`/releases/latest` do repositório) e compara com a versão local. **Nunca baixa nem substitui o executável em execução** — arriscado demais para fazer sozinho; só informa a versão nova e o link da release, para o usuário baixar manualmente, mesmo princípio de nunca fazer algo irreversível sem o usuário decidir. Testado contra a API real: hoje o repositório ainda não tem nenhuma release publicada, e o código trata isso corretamente (relata a falha 404 sem travar) em vez de presumir "está tudo em dia". Integrado ao `launcher.py --diagnostico --verificar-atualizacoes` já existente, que agora também informa a versão do programa.
+- **`instalar.cmd`/`desinstalar.cmd`** (chamam `installer\install.ps1`/`installer\uninstall.ps1`): copia o `.exe` já gerado por `build_exe.cmd` para `%LOCALAPPDATA%\AlbionMercadoAmericas`, cria atalho no Menu Iniciar e registra em Aplicativos Instalados do Windows — tudo por usuário (`HKCU`), **sem precisar de administrador**. `desinstalar.cmd` remove atalho, registro e o programa; por padrão **mantém seus dados** (banco, histórico, receitas, perfis) — passar `-RemoveData` apaga tudo. **Sem assinatura digital de código**: exige certificado pago e verificação de identidade de empresa, fora do que dá pra fazer aqui — o Windows vai avisar "editor desconhecido" na primeira execução do instalador e do programa, o que é esperado.
+- Corrigido de passagem: `build_exe.cmd` nunca tinha sido atualizado para empacotar `upgrade_costs.json` (catálogo do flip de upgrade, adicionado numa revisão anterior) nem o novo `VERSION` — o `.exe` gerado ficaria sem o catálogo de upgrade de encantamento. `launcher.py --diagnostico` também não conferia `upgrade_costs.json`; agora confere.
+
+Validação: 208 testes passaram (4 novos para `app_update.py`, mais os já existentes de `launcher.py` atualizados para nunca chamar a rede real por engano). Scripts do instalador validados por análise sintática (parser do PowerShell); a instalação real (criar atalho/registro no seu Windows) ainda não foi executada — combinado com você antes de rodar.

@@ -17,6 +17,14 @@ def disclosure(parent,title):
     return body
 
 
+def close_on_escape(window, close=None):
+    """Esc fecha a janela, como qualquer diálogo do sistema operacional —
+    nenhuma tela deste app aceitava isso antes de ser adicionado aqui.
+    `close` é a mesma função já usada pelo X da janela, quando existe;
+    sem uma, o padrão é só destruir a janela."""
+    window.bind('<Escape>', lambda event: (close or window.destroy)())
+
+
 def result_table(parent):
     table=ttk.Treeview(parent,columns=('label','premium','standard'),show='headings',height=7)
     for key,title,width in [('label','Resultado em prata',300),('premium','Premium',200),('standard','Sem Premium',200)]:

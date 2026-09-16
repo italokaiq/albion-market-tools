@@ -68,11 +68,27 @@ class ProfilesTest(unittest.TestCase):
 
     def test_diagnostic_check_updates_is_opt_in_and_uses_catalog_updater(self):
         with patch('catalog_updater.check_updates',return_value={'items.json':{'ok':True,'changed':False},
-                'world.json':{'ok':True,'changed':True},'recipes_source.json':{'ok':False,'error':'timeout'}}):
+                'world.json':{'ok':True,'changed':True},'recipes_source.json':{'ok':False,'error':'timeout'}}), \
+             patch('app_update.check_for_update',return_value={'ok':True,'update_available':False,
+                'local_version':'1.0.0','remote_version':'v1.0.0','url':'x'}):
             report=diagnostic(check_updates=True)
         self.assertEqual(report['atualizacoes'],{'items.json':'igual','world.json':'mudou',
             'recipes_source.json':'falha: timeout'})
         self.assertNotEqual(report['rede'],'não testada')
+
+    def test_diagnostic_check_updates_reports_new_program_version(self):
+        with patch('catalog_updater.check_updates',return_value={}), \
+             patch('app_update.check_for_update',return_value={'ok':True,'update_available':True,
+                'local_version':'1.0.0','remote_version':'v99.0.0','url':'https://x/v99'}):
+            report=diagnostic(check_updates=True)
+        self.assertIn('99.0.0',report['atualizacao_programa'])
+        self.assertIn('https://x/v99',report['atualizacao_programa'])
+
+    def test_diagnostic_never_touches_real_network_when_check_updates_is_false(self):
+        with patch('app_update.urllib.request.urlopen',side_effect=AssertionError('rede real chamada')), \
+             patch('catalog_updater.urllib.request.urlopen',side_effect=AssertionError('rede real chamada')):
+            report=diagnostic(check_updates=False)
+        self.assertEqual(report['rede'],'não testada')
 
     def test_loaded_profile_requires_cost_confirmation(self):
         import tkinter as tk

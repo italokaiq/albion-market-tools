@@ -2,6 +2,7 @@
 import tkinter as tk
 from tkinter import ttk
 from market_view import QUALITY, folded, item_search_text, item_tier, item_enchant
+from ui_design import close_on_escape
 
 
 def search_catalog(codes, catalog, query, tier='Todos', enchant='Todos'):
@@ -71,6 +72,7 @@ class CatalogSearch:
         query.trace_add('write',schedule)
         tier.trace_add('write',lambda *a:search());enchant.trace_add('write',lambda *a:search())
         dialog.protocol('WM_DELETE_WINDOW',close)
+        close_on_escape(dialog,close)
         search()
 
     def select_catalog_item(self,code,quality):

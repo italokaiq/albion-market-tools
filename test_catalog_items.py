@@ -52,3 +52,24 @@ class CatalogItemsTest(unittest.TestCase):
 
     def test_missing_categories_do_not_raise(self):
         self.assertEqual(extract({'items': {}}), [])
+
+    def test_explicit_tradable_false_is_excluded_from_normal_kinds(self):
+        """Achado real: itens internos de game master, banners de guildhall e caixas
+        de recompensa placeholder tinham @tradable="false" e poluíam a busca sem
+        nunca ter preço. Ausência do atributo continua incluída (padrão dos dados)."""
+        source = {'items': {
+            'weapon': [{'@uniquename': 'T4_MAIN_SWORD'}, {'@uniquename': 'UNIQUE_INTERNAL_GM', '@tradable': 'false'}],
+            'equipmentitem': [{'@uniquename': 'T4_HEAD_PLATE_SET1', '@tradable': 'true'}],
+        }}
+        self.assertEqual(extract(source), ['T4_HEAD_PLATE_SET1', 'T4_MAIN_SWORD'])
+
+    def test_consumablefrominventoryitem_requires_explicit_tradable_true(self):
+        """Ao contrário dos demais kinds, este é majoritariamente não negociável
+        (itens de progressão/vaidade pessoais) — aqui a ausência do atributo
+        não basta, só @tradable="true" explícito inclui o item."""
+        source = {'items': {'consumablefrominventoryitem': [
+            {'@uniquename': 'T4_SKILLBOOK_GATHER_FIBER', '@tradable': 'true'},
+            {'@uniquename': 'UNIQUE_FOCUSPOTION_TUTORIAL_01', '@tradable': 'false'},
+            {'@uniquename': 'UNIQUE_NO_ATTRIBUTE_AT_ALL'},
+        ]}}
+        self.assertEqual(extract(source), ['T4_SKILLBOOK_GATHER_FIBER'])

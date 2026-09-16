@@ -9,6 +9,7 @@ from tkinter import ttk
 from market_view import age_text, sync_table
 from trading import CITIES
 from upgrade_flip import UpgradeCosts, best_flip
+from ui_design import close_on_escape
 
 
 def money(v):
@@ -32,7 +33,7 @@ class UpgradeFlipPlanner:
         self.window.title('Flip de upgrade de encantamento')
         self.window.geometry('980x680')
         self.window.minsize(800, 600)
-        self.window.transient(self.app.root)
+        self.window.transient(self.app.root);close_on_escape(self.window)
         frame = ttk.Frame(self.window, padding=14)
         frame.pack(fill='both', expand=True)
         ttk.Label(frame, text='Comprar um item num encantamento mais baixo, subir com rúnicas/almas/relíquias '
@@ -99,7 +100,7 @@ class UpgradeFlipPlanner:
         dialog = tk.Toplevel(self.window)
         dialog.title('Escolher equipamento')
         dialog.geometry('700x460')
-        dialog.transient(self.window)
+        dialog.transient(self.window);close_on_escape(dialog)
         frame = ttk.Frame(dialog, padding=16)
         frame.pack(fill='both', expand=True)
         ttk.Label(frame, text='Só equipamentos com upgrade de encantamento definido (armas e itens de equipamento).').pack(anchor='w')

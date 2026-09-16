@@ -1,3 +1,25 @@
+# Revisão do aplicativo — 16/09/2026 (parte 15)
+
+## Quatro melhorias pendentes: catálogo, DPI/teclado, atualização e instalador
+
+Pedido do usuário depois da revisão geral: dado que perguntei "tem algo que podemos melhorar", pediu pra fazer todos os itens que listei, na ordem que eu achasse melhor. Tentei uma quinta melhoria primeiro (QA visual por screenshot) e ela falhou de um jeito que merece registro: ver abaixo.
+
+**QA visual abandonada**: tentei tirar um screenshot real da janela do app pra finalmente ver o resultado da paleta de cores (limitação conhecida desde a troca de cores). A técnica (capturar a tela inteira pelas coordenadas do handle da janela via PowerShell/`CopyFromScreen`) capturou a **tela real do usuário** em vez da janela do Tkinter — o app provavelmente não estava sendo renderizado na mesma sessão/monitor que o `CopyFromScreen` lia. O arquivo (que continha conteúdo não relacionado ao app, uma live da Twitch) foi apagado imediatamente, sem análise. Avisei o usuário na hora e perguntei se queria tentar de novo ou pular — pulou. **Não tentar essa técnica de novo sem entender por que capturou a tela errada.**
+
+## Catálogo: filtro `@tradable`
+
+Detalhes no changelog do README ("Catálogo: remove itens não negociáveis..."). Resumo técnico: `catalog_items.py` ganhou um `ALLOWLIST_KINDS` separado de `TRADABLE_KINDS` — a diferença é o *default* quando `@tradable` está ausente (mantém para os kinds normais, exclui para `consumablefrominventoryitem`). Achado usando o navegador embutido pra abrir a categoria real "Hardcore Expeditions" da AFM (menu Shop Categories > Other) e cruzar o nome exato do item (`QUESTITEM_EXP_TOKEN_D1_T6_EXP_HRD_HERETIC_FISHYBUSINESS`) contra `recipes_source.json` — confirmou que já estava tudo coberto, ao contrário do que uma nota de memória desatualizada dizia.
+
+## DPI e Esc
+
+Detalhes no changelog do README. `close_on_escape()` centralizado em `ui_design.py`, aplicado nos 9 diálogos — nenhum tinha isso antes. Achado de teste interessante: simular Esc numa janela `.transient()` de um `root` escondido (`root.withdraw()`, usado em toda a suíte pra não piscar janela) não funciona — é uma peculiaridade real do Tk/Windows (`focus_force()` não rouba foco de um pai nunca mapeado), não um bug no código. Confirmado isolando o problema: o mesmo bind funciona perfeitamente com um `root` visível. A suíte testa `close_on_escape()` isolado (sem `.transient()`), não o diálogo inteiro dentro do Dashboard real — é a forma de continuar testando isso sem piscar janela nem depender de foco de SO que não funciona em background.
+
+## Atualização do programa e instalador
+
+Detalhes no changelog do README. Ponto que vale registrar: **não crio releases no GitHub nem rodo o instalador de verdade sem perguntar** — publicar conteúdo público e mexer no registro/Menu Iniciar do Windows são ações que pedem confirmação explícita, mesmo estando no meio de uma tarefa já aprovada de "fazer todos os itens". Os scripts (`install.ps1`/`uninstall.ps1`) foram validados por parser do PowerShell (sintaxe), não executados. `app_update.py` foi testado contra a API real do GitHub — hoje sem nenhuma release publicada, e o código relata isso como falha honesta (404), não como "está tudo em dia" por padrão. O `.exe` foi reconstruído com `upgrade_costs.json`/`VERSION` (faltavam desde a feature anterior) e testado de verdade: `AlbionMercadoAmericas.exe --diagnostico --verificar-atualizacoes` rodando o binário empacotado, não só o código-fonte.
+
+Validação: 214 testes passaram no total (10 novos desta rodada: 2 DPI, 2 Esc, 8 app_update, mais 2 testes novos de diagnóstico com versão — alguns dentro de arquivos de teste já existentes).
+
 # Revisão do aplicativo — 16/09/2026 (parte 14)
 
 ## Revisão geral do app: bug real encontrado no fluxo de flipping

@@ -11,6 +11,7 @@ from tkinter import ttk
 from economics import flipping
 from history import History
 from market_view import sync_table
+from ui_design import close_on_escape
 
 
 def money(v):
@@ -134,7 +135,7 @@ class HistoryView:
         dialog = tk.Toplevel(self.app.root)
         dialog.title('Confirmar execução da operação')
         dialog.geometry('420x360')
-        dialog.transient(self.app.root)
+        dialog.transient(self.app.root);close_on_escape(dialog)
         frame = ttk.Frame(dialog, padding=16)
         frame.pack(fill='both', expand=True)
         ttk.Label(frame, text='Informe o que você realmente comprou e vendeu. O lucro realizado é recalculado com a mesma fórmula da calculadora.',
@@ -180,7 +181,7 @@ class HistoryView:
         dialog = tk.Toplevel(self.app.root)
         dialog.title('Confirmar execução do craft')
         dialog.geometry('420x260')
-        dialog.transient(self.app.root)
+        dialog.transient(self.app.root);close_on_escape(dialog)
         frame = ttk.Frame(dialog, padding=16)
         frame.pack(fill='both', expand=True)
         ttk.Label(frame, text='Informe quanto você realmente gastou (materiais, estação e demais custos) e recebeu com a venda. '
@@ -211,7 +212,7 @@ class HistoryView:
         dialog = tk.Toplevel(self.app.root)
         dialog.title('Registrar várias operações')
         dialog.geometry('1000x600')
-        dialog.transient(self.app.root)
+        dialog.transient(self.app.root);close_on_escape(dialog)
         frame = ttk.Frame(dialog, padding=14)
         frame.pack(fill='both', expand=True)
         ttk.Label(frame, text=f'Para operações já concluídas: previsto e realizado ficam iguais, com os valores '

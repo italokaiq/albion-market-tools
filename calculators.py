@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter import ttk, simpledialog
 from economics import flipping, crafting
 from trading import CITIES, selected_item_margin
-from ui_design import disclosure,result_table,fill_results
+from ui_design import disclosure,result_table,fill_results,close_on_escape
 from craft_prices import CraftPrices
 from history import History
 from recipe_library import RecipeLibrary
@@ -141,7 +141,7 @@ class Calculators(CraftPrices):
 
     def choose_equipment(self):
         dialog=tk.Toplevel(self.app.root);dialog.title('Escolher equipamento');dialog.geometry('800x460')
-        dialog.transient(self.app.root)
+        dialog.transient(self.app.root);close_on_escape(dialog)
         frame=ttk.Frame(dialog,padding=18);frame.pack(fill='both',expand=True)
         ttk.Label(frame,text='Busque pelo nome, tier ou encantamento. Ex.: espada T4.1').pack(anchor='w')
         query=tk.StringVar()
@@ -336,7 +336,7 @@ class Calculators(CraftPrices):
     def open_recipe_library(self):
         self.migrate_legacy_recipe()
         dialog=tk.Toplevel(self.app.root);dialog.title('Minhas receitas salvas');dialog.geometry('640x440')
-        dialog.transient(self.app.root)
+        dialog.transient(self.app.root);close_on_escape(dialog)
         frame=ttk.Frame(dialog,padding=16);frame.pack(fill='both',expand=True)
         ttk.Label(frame,text='Receitas salvas neste computador. Preços não são salvos; busque-os novamente ao carregar.',
                   wraplength=600).pack(anchor='w')
