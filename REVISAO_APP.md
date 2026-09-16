@@ -1,3 +1,17 @@
+# Revisão do aplicativo — 16/09/2026 (parte 14)
+
+## Revisão geral do app: bug real encontrado no fluxo de flipping
+
+Pedido direto do usuário: "revise todo o app e veja se tem algum bug ou erros de execução". Abordagem: baseline estático (pyflakes/compile/suíte completa, todos limpos) seguido de um teste funcional de ponta a ponta numa janela `Dashboard` real, contra o banco de produção real (não mock), cobrindo todas as 8 abas, busca/seleção de item, todas as janelas de idade máxima, todos os períodos do histórico de preço, as duas calculadoras com entradas inválidas/zero/negativas/vazias/com vírgula decimal, planejador de produção, flip de upgrade, histórico (inclusive registro em lote), biblioteca de receitas e redimensionamento em 5 tamanhos de janela. Tudo passou sem exceção não tratada.
+
+Isso não bastou sozinho — a suíte automatizada e o smoke test não exercitam **todo** combinação de estado possível (ex.: uma rota real selecionada *e* um campo específico do painel principal com texto inválido ao mesmo tempo). Fui atrás disso especificamente por ser justamente o tipo de combinação que os testes end-to-end tendem a não cobrir (cada teste tende a variar uma coisa de cada vez). Revisão dirigida em `calculators.py`/`dashboard.py` por todo ponto que faz `float(algo.get()...)`/`int(algo.get()...)` a partir de um campo de texto livre, checando se cada um está dentro de um `try/except ValueError` (padrão já estabelecido no app: nunca travar por entrada inválida, sempre avisar) ou se depende de um Combobox `readonly` (que não pode ter texto inválido por construção).
+
+**Achado**: `Calculators.use_route()` (botão "Usar rota selecionada" na calculadora de flipping) fazia `float(self.app.transport.get().replace(',','.'))` **sem nenhum try/except**, ao contrário de todo outro ponto do app que faz o mesmo tipo de parsing. Reproduzido antes de corrigir, com um cenário realista (rota fabricada com preços válidos em cidades diferentes + campo "Transporte por un." vazio/texto/múltiplos pontos): `ValueError: could not convert string to float`, não capturado, propagando pra fora do callback do botão. Comparado com `use_reference_margin()` (a função-irmã, usada quando não há rota com volume conhecido): essa por coincidência **não trava** com o mesmo tipo de entrada inválida, mas não porque está corretamente protegida — o mesmo `float()` do transporte já é chamado antes, dentro de um `try/except` que existe para outro propósito (calcular a margem de referência), e a exceção ali capturada já aborta a função antes de chegar na segunda chamada não protegida. Ou seja, o mesmo tipo de bug existe no código dessa função também, só está estruturalmente inalcançável hoje — mantive a observação registrada aqui caso a ordem do código mude no futuro.
+
+Corrigido: `use_route()` agora captura o erro nesse ponto específico, usa `0` como transporte só para essa cópia (nunca deixa o campo travado ou pela metade) e adiciona um aviso explícito no texto da operação pedindo pra corrigir o campo e copiar a rota de novo — mesmo padrão de honestidade do resto do app (nunca falha silenciosamente, nunca inventa um valor sem avisar).
+
+Validação: 198 testes passaram (2 novos em `test_calculators.py`, incluindo a reprodução exata do travamento com uma rota real antes da correção, e a confirmação de que o caminho válido com vírgula decimal continua multiplicando corretamente pela quantidade da rota).
+
 # Revisão do aplicativo — 16/09/2026 (parte 13)
 
 ## Flip de upgrade de encantamento

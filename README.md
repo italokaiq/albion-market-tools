@@ -245,3 +245,11 @@ O comparador testa **todos os caminhos possíveis** (começar em .0, .1, .2 ou .
 Testado com dados reais: os totais batem com os valores exibidos pela AFM (rúnica 5 + alma 71 + relíquia 479 × 288 cada = 159.840, caminho @0→@3 completo) e, ao vivo contra a API real (T4_MAIN_SWORD, Caerleon), o comparador encontrou corretamente o caminho mais barato (começar em .1, custo total 158.466) e o lucro estimado contra o preço de venda de .3 (258.994 → lucro líquido 73.333,63, batendo com a fórmula preço×(1-taxa-setup)-custo).
 
 Validação: 196 testes passaram (15 novos para o módulo de economia, 4 para a extração do catálogo de upgrade).
+
+## Revisão geral e correção de travamento — 16/09/2026
+
+Pedido do usuário: revisar o app todo em busca de bugs e erros de execução. Além da suíte automatizada (pyflakes, compilação, 196 testes), rodado um teste funcional cobrindo o app inteiro numa janela real contra o banco de produção: todas as 8 abas, busca no catálogo, seleção de item e gráfico, todas as janelas de idade máxima (5 a 1440 min), os 4 períodos do histórico de preço, calculadoras de flip e craft com entradas inválidas/zero/negativas/vazias, planejador de produção, flip de upgrade, registro em lote no histórico, biblioteca de receitas e redimensionamento — nada travou.
+
+**Bug real encontrado e corrigido**: `Calculators.use_route()` (usado pelo botão "Usar rota selecionada" na calculadora de flipping) travava sem nenhum aviso se o campo "Transporte por un." do painel principal estivesse vazio ou com texto não numérico — `float()` era chamado diretamente, sem o mesmo tratamento de erro já usado em todo o resto do app (ex.: `dashboard.refresh()`, `draw_chart()`, `use_reference_margin()`, que tratam esse mesmo tipo de entrada inválida com uma mensagem clara em vez de travar). Reproduzido de propósito (rota real selecionada + campo de transporte inválido) antes de corrigir, para confirmar que era alcançável e não só teórico. Corrigido: agora captura o erro, usa 0 como transporte só para essa cópia da rota e avisa explicitamente no texto da operação para o usuário corrigir o campo — nunca falha silenciosamente nem trava.
+
+Validação: 198 testes passaram (2 novos, incluindo a reprodução exata do travamento antes da correção).
