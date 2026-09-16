@@ -28,6 +28,7 @@ class Calculators(CraftPrices):
         self.recipes=RecipeCatalog(app.catalog)
         self.recipe_code=None
         self.production_planner=None
+        self.upgrade_flip_planner=None
         self.flip_observation=None
         self.init_prices()
         self.flip=ttk.Frame(app.notebook,padding=12)
@@ -68,6 +69,7 @@ class Calculators(CraftPrices):
         route_buttons=ttk.Frame(self.flip);route_buttons.pack(anchor='w')
         ttk.Button(route_buttons,text='Usar rota selecionada',command=self.use_route).pack(side='left')
         ttk.Button(route_buttons,text='Registrar operação',command=self.record_flip).pack(side='left',padx=8)
+        ttk.Button(route_buttons,text='Flip de upgrade de encantamento',command=self.open_upgrade_flip_planner).pack(side='left',padx=8)
         self.flip_note=ttk.Label(self.flip,text='',wraplength=1150)
         self.flip_note.pack(anchor='w',pady=5)
         self.flip_result=ttk.Label(self.flip,text='',font=('Segoe UI',11),wraplength=1000)
@@ -173,6 +175,12 @@ class Calculators(CraftPrices):
                 self.craft_note.config(text='Catálogo de refino indisponível. A calculadora manual continua disponível. '+str(error))
                 return
         self.production_planner.open()
+
+    def open_upgrade_flip_planner(self):
+        if self.upgrade_flip_planner is None:
+            from upgrade_flip_ui import UpgradeFlipPlanner
+            self.upgrade_flip_planner=UpgradeFlipPlanner(self)
+        self.upgrade_flip_planner.open()
 
     def apply_recipe(self,code,index=0):
         alternatives=self.recipes.recipes.get(code,[])

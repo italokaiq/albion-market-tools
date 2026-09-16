@@ -1,3 +1,23 @@
+# Revisão do aplicativo — 16/09/2026 (parte 13)
+
+## Flip de upgrade de encantamento
+
+Pedido do usuário após a conversa sobre conceitos de flip: "o flip de upgrade é muito benéfico... implemente no app... confira como é feito na Albion Free Market."
+
+**Fonte de dados**: em vez de confiar num guia de terceiros, extraí o custo de cada nível de upgrade direto de `recipes_source.json` (dados brutos do próprio jogo) — campo `enchantments.enchantment[].upgraderequirements.upgraderesource`, presente para os níveis 1–3 (Rúnica/Alma/Relíquia) e **ausente para o nível 4**, confirmando que @3→@4 não existe como upgrade (só craft direto com material @4). Script `upgrade_costs.py` gerou `upgrade_costs.json` com 4.107 passos; conferido à mão que `T4_MAIN_SWORD@1/@2/@3` batem com o valor esperado (288 de cada recurso) e que `@4` realmente não aparece.
+
+**Módulo de economia** (`upgrade_flip.py`): `evaluate_paths()` testa cada nível inicial possível (0 a alvo) e só inclui um caminho se **todos** os preços necessários (item inicial + cada recurso de upgrade em cada nível intermediário) estiverem disponíveis — mesmo princípio de nunca presumir preço ausente como zero, já usado no resto do app. `best_flip()` escolhe o caminho mais barato e compara contra o preço de venda do item já no nível alvo, aplicando as mesmas taxas (`SALES_TAX`/`SETUP_FEE`) já usadas em todo o app.
+
+**Verificado contra dois padrões independentes**: (1) valores reais vistos na AFM (rúnica 5, alma 71, relíquia 479, 288 de cada, total 159.840 para o caminho completo 0→3) viraram um teste (`test_matches_real_afm_totals_for_full_chain`); (2) consulta ao vivo à API real (T4_MAIN_SWORD, Caerleon) encontrou o caminho mais barato de verdade (começar em .1, custo 158.466) e um lucro líquido coerente com a fórmula (258.994 × 0,895 − 158.466 = 73.333,63) ao comparar contra o preço de venda de .3.
+
+**Bug próprio encontrado e corrigido antes de qualquer teste**: `money(self.result['start_level'] and self.result['buy_price'])` na tela — como `start_level` pode ser `0` (caminho que já começa no próprio recurso base), `0 and x` avalia pra `0` em Python, mostrando preço de compra errado sempre que o caminho mais barato começava em .0. Corrigido removendo o `and` desnecessário.
+
+**Fora do escopo, deliberadamente**: reroll de qualidade (probabilístico — precisaria de taxa de sucesso que não temos como verificar sem dado real) e "Equivalent Tiers" da AFM (comparação entre tiers, funcionalidade separada e maior).
+
+A tela nova filtra preços pela mesma idade máxima configurada na tela principal — como os preços vêm da API em lote (mesma fonte já usada nas rotas de flipping), valem as mesmas ressalvas já documentadas: no padrão de 15 min, praticamente nada passa; é preciso aumentar a janela (testado com 1440 min) pra ver cobertura real, especialmente pros recursos de upgrade, negociados com menos frequência que o próprio equipamento.
+
+Validação: 196 testes passaram (19 novos: 4 de extração do catálogo, 15 do módulo de economia), `pyflakes`/`py_compile` limpos, e um teste funcional de ponta a ponta na janela real (abrir, escolher item, consultar preços reais, conferir resultado) confirmando que o filtro de idade e os modos "Imediata"/"Ordem de compra/venda" funcionam como esperado.
+
 # Revisão do aplicativo — 15/09/2026 (parte 12)
 
 ## Rotas de flipping ampliadas pela API
